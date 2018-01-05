@@ -1,0 +1,10 @@
+node_modules
+.DB_store
+dist
+.vscode
+*.log
+*.pem
+.tmp
+*.tgz
+.nyc_output
+coverage

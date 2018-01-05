@@ -1,0 +1,11 @@
+node_modules
+.DB_store
+src/
+test/
+dist/test
+.vscode
+.editorconfig
+.eslintrc.yaml
+*.tgz
+.nyc_output
+coverage
