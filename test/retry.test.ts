@@ -1,17 +1,18 @@
 import test from 'ava';
 
-import { Producer, Consumer, Task, RetryStrategy, TaskMeta } from '../src/index';
 import * as Bluebird from 'bluebird';
 import * as _ from 'lodash';
+import { Producer, Consumer, Task, RetryStrategy, TaskMeta } from '../src/index';
+import { waitUtilDone } from './utils';
 
 Promise = Bluebird as any;
 
+async function testRetry(t, retryStrategy: RetryStrategy) {
+  const taskName = `test-retry-${retryStrategy}`;
 
-test('#retry task fib', async t => {
-  const taskName = 'test-retry-fib';
-
-  const maxRetry = 3;
+  const maxRetry = 5;
   t.plan(maxRetry + 1);
+  const {promise, doneOne} = waitUtilDone(maxRetry + 1);
 
   const consumer = new Consumer();
   await consumer.createConnection();
@@ -20,6 +21,7 @@ test('#retry task fib', async t => {
     concurrency: 20,
   }, async (data) => {
     t.true(true);
+    doneOne();
     throw new Error('test');
   });
 
@@ -27,66 +29,22 @@ test('#retry task fib', async t => {
     .createTask(<Task>{
       name: taskName,
       body: { test: 'test' },
-      initDelayMs: 10,
+      initDelayMs: 50,
       maxRetry,
-      retryStrategy: RetryStrategy.FIBONACCI,
+      retryStrategy,
     });
 
-  await Promise.delay(3000);
+  await promise;
+}
+
+test('#retry task fib', async t => {
+  await testRetry(t, RetryStrategy.FIBONACCI);
 });
 
 test('#retry task exp', async t => {
-  const taskName = 'test-retry-exp';
-
-  const maxRetry = 3;
-  t.plan(maxRetry + 1);
-
-  const consumer = new Consumer();
-  await consumer.createConnection();
-  consumer.register(<TaskMeta>{
-    name: taskName,
-    concurrency: 20,
-  }, async (data) => {
-    t.true(true);
-    throw new Error('test');
-  });
-
-  await (new Producer())
-    .createTask(<Task>{
-      name: taskName,
-      body: { test: 'test' },
-      initDelayMs: 10,
-      maxRetry,
-      retryStrategy: RetryStrategy.EXPONENTIAL,
-    });
-
-  await Promise.delay(3000);
+  await testRetry(t, RetryStrategy.EXPONENTIAL);
 });
 
 test('#retry task lne', async t => {
-  const taskName = 'test-retry-lne';
-
-  const maxRetry = 3;
-  t.plan(maxRetry + 1);
-
-  const consumer = new Consumer();
-  await consumer.createConnection();
-  consumer.register(<TaskMeta>{
-    name: taskName,
-    concurrency: 20,
-  }, async (data) => {
-    t.true(true);
-    throw new Error('test');
-  });
-
-  await (new Producer())
-    .createTask(<Task>{
-      name: taskName,
-      body: { test: 'test' },
-      initDelayMs: 10,
-      maxRetry,
-      retryStrategy: RetryStrategy.LINEAR,
-    });
-
-  await Promise.delay(3000);
+  await testRetry(t, RetryStrategy.LINEAR);
 });

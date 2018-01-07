@@ -39,7 +39,8 @@
   "ava": {
     "files": [
       "dist/test/**/*.test.js"
-    ]
+    ],
+    "timeout": "5s"
   },
   "nyc": {
     "extension": [
