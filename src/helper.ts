@@ -1,4 +1,4 @@
-import * as _ from 'lodash'
+import * as _ from 'lodash';
 import { RetryStrategy } from './common';
 import { Options } from 'amqplib';
 import { Task } from './index';

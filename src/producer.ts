@@ -145,7 +145,7 @@ export class Producer {
         return ch.publish(exchangeName, routingKey, new Buffer(data), publishOptions, (err, ok) => {
           if (err) return reject(err);
           return resolve(ok);
-        })
+        });
       });
     }
 
@@ -154,7 +154,7 @@ export class Producer {
     return new Promise((resolve, reject) => {
       this.waitQueue.push((channel) => {
         return publish(channel).then(resolve, reject);
-      })
+      });
     });
   }
 }

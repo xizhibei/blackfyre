@@ -7,8 +7,8 @@ export interface TaskMeta {
   name: string;
 
   /**
-  * Task concurrency, setting as the prefetch size
-  */
+   * Task concurrency, setting as the prefetch size
+   */
   concurrency: number;
 
   /**
@@ -22,7 +22,7 @@ export interface Task {
   /**
    * Task id, default: `uuid.v4()`
    */
-  id: string,
+  id: string;
 
   /**
    * Task name, will use as the routing key

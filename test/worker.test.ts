@@ -7,7 +7,7 @@ import * as _ from 'lodash';
 Promise = Bluebird as any;
 
 test('#worker health check', async (t) => {
-  const taskName = 'test-health-check'
+  const taskName = 'test-health-check';
   const consumer = new Consumer();
 
   await consumer.createConnection();
@@ -72,7 +72,7 @@ test('#normal task', async (t) => {
 });
 
 test('#priority task', async (t) => {
-  const taskName = 'test-priority'
+  const taskName = 'test-priority';
 
   t.plan(1);
 

@@ -8,7 +8,7 @@ Promise = Bluebird as any;
 
 
 test('#retry task fib', async t => {
-  const taskName = 'test-retry-fib'
+  const taskName = 'test-retry-fib';
 
   const maxRetry = 3;
   t.plan(maxRetry + 1);

@@ -28,4 +28,4 @@ test('#test mode', async (t) => {
   t.is(producer.createdTasks.length, 1);
   const task = producer.createdTasks[0];
   t.is(task.body.test, 'test');
-})
+});

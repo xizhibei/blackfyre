@@ -219,7 +219,7 @@ export class Consumer {
     const delayQueue = getDelayQueue(delayMs, this.config.exchangeName, task.name);
     const queueDaclareOptions = getDelayQueueOptions(delayMs, this.config.exchangeName, task.name);
 
-    await this.channel.assertQueue(delayQueue, queueDaclareOptions)
+    await this.channel.assertQueue(delayQueue, queueDaclareOptions);
     await this.channel.sendToQueue(delayQueue, new Buffer(JSON.stringify(task)), {
       persistent: true,
     });
