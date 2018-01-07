@@ -8,11 +8,8 @@
     "lib": [
       "es2015"
     ],
-    "types": [
-      "node",
-      "lodash",
-      "bluebird",
-      "bluebird-global"
+    "typeRoots" : [
+      "./node_modules/@types/"
     ]
   },
   "include": [
