@@ -1,6 +1,6 @@
 import { Options } from 'amqplib';
 
-export interface TaskDefination {
+export interface TaskMeta {
   /**
    * Task name, will use as the routing key
    */

@@ -1,6 +1,6 @@
 import test from 'ava';
 
-import { Producer, Consumer, Task, RetryStrategy, TaskDefination } from '../src/index';
+import { Producer, Consumer, Task, RetryStrategy, TaskMeta } from '../src/index';
 import * as Bluebird from 'bluebird';
 import * as _ from 'lodash';
 
@@ -10,12 +10,12 @@ Promise = Bluebird as any;
 test('#retry task fib', async t => {
   const taskName = 'test-retry-fib'
 
-  const maxRetry = 5;
+  const maxRetry = 3;
   t.plan(maxRetry + 1);
 
   const consumer = new Consumer();
   await consumer.createConnection();
-  consumer.register(<TaskDefination>{
+  consumer.register(<TaskMeta>{
     name: taskName,
     concurrency: 20,
   }, async (data) => {
@@ -38,12 +38,12 @@ test('#retry task fib', async t => {
 test('#retry task exp', async t => {
   const taskName = 'test-retry-exp';
 
-  const maxRetry = 5;
+  const maxRetry = 3;
   t.plan(maxRetry + 1);
 
   const consumer = new Consumer();
   await consumer.createConnection();
-  consumer.register(<TaskDefination>{
+  consumer.register(<TaskMeta>{
     name: taskName,
     concurrency: 20,
   }, async (data) => {
@@ -66,12 +66,12 @@ test('#retry task exp', async t => {
 test('#retry task lne', async t => {
   const taskName = 'test-retry-lne';
 
-  const maxRetry = 5;
+  const maxRetry = 3;
   t.plan(maxRetry + 1);
 
   const consumer = new Consumer();
   await consumer.createConnection();
-  consumer.register(<TaskDefination>{
+  consumer.register(<TaskMeta>{
     name: taskName,
     concurrency: 20,
   }, async (data) => {

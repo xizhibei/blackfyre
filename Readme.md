@@ -8,7 +8,7 @@ Distributed asynchronous task queue/job queue
 
 ## Installation
 ```bash
-npm install amqp-worker
+npm install blackfyre
 ```
 
 ## Features
@@ -29,19 +29,23 @@ npm install amqp-worker
 
 ## Overview
 
-### Using newrelic apm wrap
+### Using newrelic in process wrap
 ```ts
-export function newrelicWrap(newrelic): ProcessFunc {
-    return newrelic.startBackgroundTransaction(_this.taskMetadata.name, async (data: any, task: Task) => {
-    try {
-        const result = await _this.processFunc(data, task);
-        return result;
-    } catch (e) {
-        newrelic.noticeError(e);
-        throw e;
+import * as newrelic from 'newrelic';
+
+const consumer = new Consumer(<ConsumerConfig>{
+    processWrap(processFunc): ProcessFunc {
+        return newrelic.startBackgroundTransaction(taskName, async (data: any, task: Task) => {
+            try {
+                const result = await processFunc(data, task);
+                return result;
+            } catch (e) {
+                newrelic.noticeError(e);
+                throw e;
+            }
+        });
     }
-    });
-}
+});
 ```
 
 ### Using prom client moniter

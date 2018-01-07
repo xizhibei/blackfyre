@@ -9,7 +9,7 @@ import {
   ConsumerConfig,
   TaskState,
   ProcessFunc,
-  TaskDefination,
+  TaskMeta,
 } from '../src/index';
 
 Promise = Bluebird as any;
@@ -26,7 +26,7 @@ test('#task preProcess', async (t) => {
   });
 
   await consumer.createConnection();
-  consumer.register(<TaskDefination>{
+  consumer.register(<TaskMeta>{
     name: taskName,
     concurrency: 20,
   }, async (data) => {
@@ -55,7 +55,7 @@ test('#task postProcess: success', async (t) => {
   });
 
   await consumer.createConnection();
-  consumer.register(<TaskDefination>{
+  consumer.register(<TaskMeta>{
     name: taskName,
     concurrency: 20,
   }, async (data) => {
@@ -85,7 +85,7 @@ test('#task postProcess: fail', async (t) => {
   });
 
   await consumer.createConnection();
-  consumer.register(<TaskDefination>{
+  consumer.register(<TaskMeta>{
     name: taskName,
     concurrency: 20,
   }, async (data) => {
@@ -122,7 +122,7 @@ test('#task hook for prom client', async (t) => {
   });
 
   await consumer.createConnection();
-  consumer.register(<TaskDefination>{
+  consumer.register(<TaskMeta>{
     name: taskName,
     concurrency: 20,
   }, async (data) => {
@@ -145,13 +145,13 @@ test('#task apm wrap', async (t) => {
   t.plan(1);
 
   const consumer = new Consumer(<ConsumerConfig>{
-    apmWrap(func: ProcessFunc): ProcessFunc {
+    processWrap(func: ProcessFunc): ProcessFunc {
       return func;
     },
   });
 
   await consumer.createConnection();
-  consumer.register(<TaskDefination>{
+  consumer.register(<TaskMeta>{
     name: taskName,
     concurrency: 20,
   }, async (data) => {

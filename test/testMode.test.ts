@@ -8,7 +8,7 @@ import {
   Consumer,
   Task,
   RetryStrategy,
-  TaskDefination,
+  TaskMeta,
   ProducerConfig,
 } from '../src/index';
 

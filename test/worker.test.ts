@@ -1,6 +1,6 @@
 import test from 'ava';
 
-import { Producer, Consumer, Task, TaskDefination } from '../src/index';
+import { Producer, Consumer, Task, TaskMeta } from '../src/index';
 import * as Bluebird from 'bluebird';
 import * as _ from 'lodash';
 
@@ -11,7 +11,7 @@ test('#worker health check', async (t) => {
   const consumer = new Consumer();
 
   await consumer.createConnection();
-  consumer.register(<TaskDefination>{
+  consumer.register(<TaskMeta>{
     name: taskName,
     concurrency: 20,
   }, async (data) => {
@@ -31,7 +31,7 @@ test('#worker wait producer to be ready', async (t) => {
   const consumer = new Consumer();
 
   await consumer.createConnection();
-  consumer.register(<TaskDefination>{
+  consumer.register(<TaskMeta>{
     name: taskName,
     concurrency: 20,
   }, async (data) => {
@@ -55,7 +55,7 @@ test('#normal task', async (t) => {
   const consumer = new Consumer();
 
   await consumer.createConnection();
-  consumer.register(<TaskDefination>{
+  consumer.register(<TaskMeta>{
     name: taskName,
     concurrency: 20,
   }, async (data) => {
@@ -79,7 +79,7 @@ test('#priority task', async (t) => {
 
   const consumer = new Consumer();
   await consumer.createConnection();
-  consumer.register(<TaskDefination>{
+  consumer.register(<TaskMeta>{
     name: taskName,
     concurrency: 20,
     maxPriority: 20,
@@ -104,7 +104,7 @@ test('#delay task', async t => {
 
   const consumer = new Consumer();
   await consumer.createConnection();
-  consumer.register(<TaskDefination>{
+  consumer.register(<TaskMeta>{
     name: taskName,
     concurrency: 20,
   }, async (data) => {

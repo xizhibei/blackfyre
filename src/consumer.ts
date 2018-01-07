@@ -4,7 +4,7 @@ import * as debug from 'debug';
 
 import {
   Task,
-  TaskDefination,
+  TaskMeta,
   TaskState,
   RetryStrategy,
 } from './common';
@@ -55,7 +55,7 @@ export interface ConsumerConfig {
   /**
    *  Apm wrap, such as newrelic
    */
-  apmWrap?: (func: ProcessFunc) => ProcessFunc;
+  processWrap?: (func: ProcessFunc) => ProcessFunc;
 
   /**
    *  Rre process hook
@@ -96,7 +96,7 @@ export class Consumer {
   private channel: amqp.Channel = null;
   private queueName: string = null;
   private connecting: boolean = false;
-  private taskDefination: TaskDefination;
+  private taskMeta: TaskMeta;
   private processFunc: ProcessFunc;
 
   public constructor(config: ConsumerConfig = {}) {
@@ -105,7 +105,7 @@ export class Consumer {
         info: _.noop,
         error: _.noop,
       },
-      apmWrap: null,
+      processWrap: null,
       queueSuffix: 'queue',
       exchangeName: 'worker-exchange',
       url: 'amqp://localhost',
@@ -153,10 +153,10 @@ export class Consumer {
   }
 
   private async createChannel(): Promise<amqp.Channel> {
-    const taskDefination = this.taskDefination;
-    const prefetchSize = taskDefination.concurrency || this.config.globalConcurrency;
+    const taskMeta = this.taskMeta;
+    const prefetchSize = taskMeta.concurrency || this.config.globalConcurrency;
 
-    this.queueName = `${taskDefination.name}_${this.config.queueSuffix}`;
+    this.queueName = `${taskMeta.name}_${this.config.queueSuffix}`;
     log(`Creating task queue: ${this.queueName}, prefetch size: ${prefetchSize}`);
     const conn = await this.createConnection();
 
@@ -166,8 +166,8 @@ export class Consumer {
     const options: amqp.Options.AssertQueue = {
       durable: true,
     };
-    if (taskDefination.maxPriority) {
-      options.maxPriority = taskDefination.maxPriority;
+    if (taskMeta.maxPriority) {
+      options.maxPriority = taskMeta.maxPriority;
     }
 
     await channel.assertExchange(this.config.exchangeName, 'direct');
@@ -175,7 +175,7 @@ export class Consumer {
     await Promise
       .all([
         channel.assertQueue(this.queueName, options),
-        channel.bindQueue(this.queueName, this.config.exchangeName, taskDefination.name),
+        channel.bindQueue(this.queueName, this.config.exchangeName, taskMeta.name),
         channel.prefetch(prefetchSize),
       ]);
     log('Got channel');
@@ -228,7 +228,7 @@ export class Consumer {
 
   private logSuccess(msg: amqp.Message, startTime: number, result: object): void {
     this.config.logger.info({
-      taskType: this.taskDefination.name,
+      taskType: this.taskMeta.name,
       data: msg.content,
       duration: Date.now() - startTime,
       result: JSON.stringify(result),
@@ -241,7 +241,7 @@ export class Consumer {
 
   private logFail(msg: amqp.Message, startTime: number, e: Error): void {
     this.config.logger.error({
-      taskType: this.taskDefination.name,
+      taskType: this.taskMeta.name,
       data: msg.content,
       duration: Date.now() - startTime,
       error: e,
@@ -258,12 +258,12 @@ export class Consumer {
     const _this = this;
 
     let processFunc = _this.processFunc;
-    if (this.config.apmWrap) {
-      processFunc = this.config.apmWrap(processFunc);
+    if (this.config.processWrap) {
+      processFunc = this.config.processWrap(processFunc);
     }
 
     log('Begin to consume');
-    const taskName = _this.taskDefination.name.replace(/-/g, '_');
+    const taskName = _this.taskMeta.name.replace(/-/g, '_');
     async function processFuncWrap(msg) {
       if (msg === null) return;
 
@@ -313,8 +313,8 @@ export class Consumer {
     });
   }
 
-  register(taskDefination: TaskDefination, processFunc: ProcessFunc) {
-    this.taskDefination = taskDefination;
+  register(taskMeta: TaskMeta, processFunc: ProcessFunc) {
+    this.taskMeta = taskMeta;
     this.processFunc = processFunc;
 
     this.checkConnection();
