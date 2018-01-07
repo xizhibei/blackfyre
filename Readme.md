@@ -1,5 +1,10 @@
 # Blackfyre
 
+[![Build Status](https://travis-ci.org/xizhibei/blackfyre.svg?branch=master&style=flat)](https://travis-ci.org/xizhibei/blackfyre)
+[![npm version](https://badge.fury.io/js/blackfyre.svg?style=flat)](http://badge.fury.io/js/blackfyre)
+[![Dependency Status](https://img.shields.io/david/xizhibei/blackfyre.svg?style=flat)](https://david-dm.org/xizhibei/blackfyre)
+[![Coverage Status](https://coveralls.io/repos/github/xizhibei/blackfyre/badge.svg?branch=master)](https://coveralls.io/github/xizhibei/blackfyre?branch=master)
+
 Distributed asynchronous task queue/job queue
 
 ### Warning
@@ -28,6 +33,25 @@ npm install blackfyre
 - Event handler & emiter
 
 ## Overview
+
+### Basic
+```ts
+const consumer = new Consumer();
+
+await consumer.createConnection();
+consumer.register(<TaskMeta>{
+    name: taskName,
+    concurrency: 20,
+}, async (data) => {
+    console.log(data);
+});
+
+await (new Producer())
+    .createTask(<Task>{
+        name: taskName,
+        body: { test: 'test' }
+    });
+```
 
 ### Using newrelic in process wrap
 ```ts
@@ -69,7 +93,7 @@ const consumer = new Consumer(<ConsumerConfig>{
 });
 ```
 
-### Tesing
+### Testing
 
 ```ts
   const producer = new Producer(<ProducerConfig>{
