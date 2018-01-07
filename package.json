@@ -7,6 +7,7 @@
   "scripts": {
     "test": "tsc && ava",
     "coverage": "nyc npm test",
+    "coverage-ci": "nyc npm test && nyc report --reporter=text-lcov | coveralls",
     "build": "tsc",
     "clean": "rm -rf dist/*",
     "lint": "tslint --format prose src/**/*.ts test/**/*.ts"
@@ -68,7 +69,9 @@
     "@types/node": "^8.5.5",
     "@types/uuid": "^3.4.3",
     "ava": "^0.24.0",
+    "coveralls": "^3.0.0",
     "nyc": "^11.4.1",
+    "prom-client": "^10.2.2",
     "tslint": "^5.8.0",
     "typescript": "^2.6.2"
   }

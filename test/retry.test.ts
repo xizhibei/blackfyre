@@ -32,7 +32,7 @@ test('#retry task fib', async t => {
       retryStrategy: RetryStrategy.FIBONACCI,
     });
 
-  await Promise.delay(2000);
+  await Promise.delay(3000);
 });
 
 test('#retry task exp', async t => {
@@ -60,7 +60,7 @@ test('#retry task exp', async t => {
       retryStrategy: RetryStrategy.EXPONENTIAL,
     });
 
-  await Promise.delay(2000);
+  await Promise.delay(3000);
 });
 
 test('#retry task lne', async t => {
@@ -88,5 +88,5 @@ test('#retry task lne', async t => {
       retryStrategy: RetryStrategy.LINEAR,
     });
 
-  await Promise.delay(2000);
+  await Promise.delay(3000);
 });
