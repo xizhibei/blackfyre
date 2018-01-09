@@ -45,7 +45,7 @@ export interface ConsumerConfig {
   /**
    *  Socket options for amqp connec
    */
-  socketOptions?: amqp.Options.Connect;
+  socketOptions?: any;
 
   /**
    *  Logger instance
@@ -68,24 +68,9 @@ export interface ConsumerConfig {
   postProcess?: (task: Task, state: TaskState, errorOrResult: any) => void;
 
   /**
-   * Global max retry for task, will be override by task metadata, default: 0
-   */
-  globalMaxRetry?: number;
-
-  /**
-   * Global init delay for task, will be override by task metadata, default: 100
-   */
-  globalInitDelayMs?: number;
-
-  /**
-   * Global concurrency for task, will be override by task metadata, default: 256
+   * Global concurrency for task, will be overrided by task, default: 256
    */
   globalConcurrency?: number;
-
-  /**
-   * Global retry strategy for task, will be override by task metadata, default: FIBONACCI
-   */
-  globalretryStrategy?: RetryStrategy;
 }
 
 export class Consumer {
@@ -109,10 +94,7 @@ export class Consumer {
       queueSuffix: 'queue',
       exchangeName: 'worker-exchange',
       url: 'amqp://localhost',
-      globalMaxRetry: 0,
-      globalInitDelayMs: 100,
       globalConcurrency: 256,
-      globalretryStrategy: RetryStrategy.FIBONACCI,
     };
     this.config = Object.assign({}, defaultConfig, config);
   }
@@ -203,11 +185,6 @@ export class Consumer {
   }
 
   private async taskRetry(task: Task): Promise<number> {
-    task.retryCount = task.retryCount || 0;
-    task.maxRetry = task.maxRetry || this.config.globalMaxRetry;
-    task.initDelayMs = task.initDelayMs || this.config.globalInitDelayMs;
-    task.retryStrategy = task.retryStrategy || this.config.globalretryStrategy;
-
     if (task.retryCount >= task.maxRetry) {
       return Promise.resolve(0);
     }

@@ -35,6 +35,25 @@ export interface ProducerConfig {
    *  Socket options for amqp connec
    */
   socketOptions?: amqp.Options.Connect;
+
+  /**
+   * Global max retry for task, will be override by task metadata, default: 0
+   */
+  globalMaxRetry?: number;
+
+  /**
+   * Global init delay for task, will be override by task metadata, default: 100
+   */
+  globalInitDelayMs?: number;
+
+  /**
+   * Global retry strategy for task, will be override by task metadata, default: FIBONACCI
+   */
+  globalretryStrategy?: RetryStrategy;
+}
+
+interface PublishFunc {
+  (channel: amqp.ConfirmChannel): Promise<any>;
 }
 
 export class Producer {
@@ -52,6 +71,9 @@ export class Producer {
       exchangeName: 'worker-exchange',
       isTestMode: false,
       url: 'amqp://localhost',
+      globalMaxRetry: 0,
+      globalInitDelayMs: 100,
+      globalretryStrategy: RetryStrategy.FIBONACCI,
     };
     this.config = Object.assign({}, defaultConfig, config);
   }
@@ -105,34 +127,21 @@ export class Producer {
     return this.channel;
   }
 
-  public async createTask(taskMetadata: Task): Promise<any> {
-    const that = this;
+  private getPushlistFunc(task: Task): PublishFunc {
+    const _this = this;
+    return async function publish(ch) {
+      const data = JSON.stringify(task);
 
-    taskMetadata.id = uuid.v4();
+      const exchangeName = _this.config.exchangeName;
+      const routingKey = task.name;
 
-    if (this.config.isTestMode) {
-      this.createdTasks.push(taskMetadata);
-      return;
-    }
+      const publishOptions: amqp.Options.Publish = {
+        persistent: true,
+        priority: task.priority,
+      };
 
-    const publishOptions: amqp.Options.Publish = {
-      persistent: true,
-      priority: taskMetadata.priority,
-    };
-
-    if (!this.connecting) {
-      this.connecting = true;
-      this.getChannel();
-    }
-
-    async function publish(ch) {
-      const data = JSON.stringify(taskMetadata);
-
-      const exchangeName = that.config.exchangeName;
-      const routingKey = taskMetadata.name;
-
-      if (taskMetadata.eta && taskMetadata.eta > Date.now()) {
-        const delayMs = taskMetadata.eta - Date.now();
+      if (task.eta && task.eta > Date.now()) {
+        const delayMs = task.eta - Date.now();
         const delayQueue = getDelayQueue(delayMs, exchangeName, routingKey);
         const queueDaclareOptions = getDelayQueueOptions(delayMs, exchangeName, routingKey);
 
@@ -147,7 +156,28 @@ export class Producer {
           return resolve(ok);
         });
       });
+    };
+  }
+
+  public async createTask(task: Task): Promise<any> {
+    task.id = uuid.v4();
+    task.retryCount = 0;
+
+    task.maxRetry = task.maxRetry || this.config.globalMaxRetry;
+    task.initDelayMs = task.initDelayMs || this.config.globalInitDelayMs;
+    task.retryStrategy = task.retryStrategy || this.config.globalretryStrategy;
+
+    if (this.config.isTestMode) {
+      this.createdTasks.push(task);
+      return;
     }
+
+    if (!this.connecting) {
+      this.connecting = true;
+      this.getChannel();
+    }
+
+    const publish: PublishFunc = this.getPushlistFunc(task);
 
     if (this.channel) return publish(this.channel);
 
