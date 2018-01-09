@@ -12,12 +12,15 @@ import {
   TaskMeta,
 } from '../src/index';
 
+import { waitUtilDone } from './utils';
+
 Promise = Bluebird as any;
 
 test('#task preProcess', async (t) => {
   const taskName = 'hook-test-1';
 
   t.plan(2);
+  const { promise, doneOne } = waitUtilDone(1);
 
   const consumer = new Consumer(<ConsumerConfig>{
     preProcess(task: Task): void {
@@ -31,6 +34,7 @@ test('#task preProcess', async (t) => {
     concurrency: 20,
   }, async (data) => {
     t.is(data.test, 'test');
+    doneOne();
   });
 
   await (new Producer())
@@ -39,18 +43,20 @@ test('#task preProcess', async (t) => {
       body: { test: 'test' }
     });
 
-  await Promise.delay(100);
+  await promise;
 });
 
 test('#task postProcess: success', async (t) => {
   const taskName = 'hook-test-2';
 
   t.plan(3);
+  const { promise, doneOne } = waitUtilDone(1);
 
   const consumer = new Consumer(<ConsumerConfig>{
     postProcess(task: Task, state: TaskState, errorOrResult: any): void {
       t.is(state, TaskState.SUCCEED);
       t.is(errorOrResult, 'test');
+      doneOne();
     },
   });
 
@@ -69,18 +75,20 @@ test('#task postProcess: success', async (t) => {
       body: { test: 'test' }
     });
 
-  await Promise.delay(100);
+  await promise;
 });
 
 test('#task postProcess: fail', async (t) => {
   const taskName = 'hook-test-3';
 
   t.plan(3);
+  const { promise, doneOne } = waitUtilDone(1);
 
   const consumer = new Consumer(<ConsumerConfig>{
     postProcess(task: Task, state: TaskState, errorOrResult: any): void {
-      t.is(state, TaskState.FAILED);
+      t.is(state, TaskState.PERMANENT_FAILED);
       t.is(errorOrResult.message, 'test');
+      doneOne();
     },
   });
 
@@ -99,7 +107,7 @@ test('#task postProcess: fail', async (t) => {
       body: { test: 'test' }
     });
 
-  await Promise.delay(100);
+  await promise;
 });
 
 test('#task hook for prom client', async (t) => {
@@ -121,11 +129,14 @@ test('#task hook for prom client', async (t) => {
     },
   });
 
+  const { promise, doneOne } = waitUtilDone(1);
+
   await consumer.createConnection();
   consumer.register(<TaskMeta>{
     name: taskName,
     concurrency: 20,
   }, async (data) => {
+    doneOne();
   });
 
   await (new Producer())
@@ -134,7 +145,7 @@ test('#task hook for prom client', async (t) => {
       body: { test: 'test' }
     });
 
-  await Promise.delay(100);
+  await promise;
 
   const metric = promClient.register.getSingleMetricAsString('job_summary');
   t.regex(metric, /taskName="hook-test-prom-client",state="succeed"/i);
@@ -150,12 +161,15 @@ test('#task apm wrap', async (t) => {
     },
   });
 
+  const { promise, doneOne } = waitUtilDone(1);
+
   await consumer.createConnection();
   consumer.register(<TaskMeta>{
     name: taskName,
     concurrency: 20,
   }, async (data) => {
     t.is(data.test, 'test');
+    doneOne();
   });
 
   await (new Producer())
@@ -164,5 +178,5 @@ test('#task apm wrap', async (t) => {
       body: { test: 'test' }
     });
 
-  await Promise.delay(100);
+  await promise;
 });

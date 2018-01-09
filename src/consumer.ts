@@ -273,10 +273,15 @@ export class Consumer {
         channel.ack(msg);
       } catch (e) {
         e.retryLeft = await _this.taskRetry(task);
+        e.state = TaskState.FAILED;
+
+        if (e.retryLeft === 0) {
+          e.state = TaskState.PERMANENT_FAILED;
+        }
 
         if (_this.config.postProcess) {
           _this.config.postProcess.bind(this);
-          _this.config.postProcess(task, TaskState.FAILED, e);
+          _this.config.postProcess(task, e.state, e);
         }
 
         _this.logFail(msg, startTime, e);

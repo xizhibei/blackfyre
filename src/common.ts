@@ -71,6 +71,18 @@ export enum RetryStrategy {
 }
 
 export enum TaskState {
+  /**
+   * The task is succeed
+   */
   SUCCEED = 'succeed',
+
+  /**
+   * The task is failed, and will be retried
+   */
   FAILED = 'failed',
+
+  /**
+   * The task is permanent failed, won't be retried
+   */
+  PERMANENT_FAILED = 'permanent-failed',
 }
