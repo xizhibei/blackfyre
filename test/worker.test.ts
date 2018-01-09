@@ -11,7 +11,6 @@ test('#worker health check', async (t) => {
   const taskName = 'test-health-check';
   const consumer = new Consumer();
 
-  await consumer.createConnection();
   consumer.register(<TaskMeta>{
     name: taskName,
     concurrency: 20,
@@ -33,7 +32,6 @@ test('#worker wait producer to be ready', async (t) => {
 
   const consumer = new Consumer();
 
-  await consumer.createConnection();
   consumer.register(<TaskMeta>{
     name: taskName,
     concurrency: 20,
@@ -59,7 +57,6 @@ test('#normal task', async (t) => {
 
   const consumer = new Consumer();
 
-  await consumer.createConnection();
   consumer.register(<TaskMeta>{
     name: taskName,
     concurrency: 20,
@@ -84,7 +81,6 @@ test('#priority task', async (t) => {
   const { promise, doneOne } = waitUtilDone(1);
 
   const consumer = new Consumer();
-  await consumer.createConnection();
   consumer.register(<TaskMeta>{
     name: taskName,
     concurrency: 20,
@@ -111,7 +107,6 @@ test('#delay task', async t => {
   const { promise, doneOne } = waitUtilDone(1);
 
   const consumer = new Consumer();
-  await consumer.createConnection();
   consumer.register(<TaskMeta>{
     name: taskName,
     concurrency: 20,

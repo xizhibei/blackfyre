@@ -1,3 +1,5 @@
+import { setInterval, clearInterval } from 'timers';
+
 import * as _ from 'lodash';
 import * as amqp from 'amqplib';
 import * as debug from 'debug';
@@ -74,15 +76,20 @@ export interface ConsumerConfig {
 }
 
 export class Consumer {
+  public static instances: Consumer[] = [];
+
   private static connection: amqp.Connection;
+  private static isConnecting: boolean = false;
   private static alreadyClosed: boolean;
 
   private config: ConsumerConfig;
   private channel: amqp.Channel = null;
+  private isChannelCreating: boolean = false;
   private queueName: string = null;
-  private connecting: boolean = false;
   private taskMeta: TaskMeta;
   private processFunc: ProcessFunc;
+  private consumerTag: string;
+  private checkJob: NodeJS.Timer;
 
   public constructor(config: ConsumerConfig = {}) {
     const defaultConfig: ConsumerConfig = {
@@ -97,6 +104,9 @@ export class Consumer {
       globalConcurrency: 256,
     };
     this.config = Object.assign({}, defaultConfig, config);
+
+    // Collected for moniting
+    Consumer.instances.push(this);
   }
 
   public async createConnection(): Promise<amqp.Connection> {
@@ -109,32 +119,18 @@ export class Consumer {
     Consumer.connection.on('error', (err) => {
       console.error(`Connection error ${err} stack: ${err.stack}`);
     });
-    Consumer.connection.on('close', () => {
-      console.error('Connection close');
-      this.channel = null;
-    });
-    Consumer.connection.on('blocked', () => {
-      console.error('Connection blocked');
-    });
-    Consumer.connection.on('unblocked', () => {
-      console.error('Connection unblocked');
-    });
 
-    if (!Consumer.alreadyClosed) {
-      Consumer.alreadyClosed = true;
-      process.once('exit', (sig) => {
-        if (Consumer.connection) {
-          Consumer.connection.close();
-          Consumer.connection = null;
-        }
-        log(`Exit with sig: ${sig}`);
-      });
-    }
+    Consumer.connection.on('close', () => {
+      console.log('Connection close');
+      Consumer.connection = null;
+    });
 
     return Consumer.connection;
   }
 
   private async createChannel(): Promise<amqp.Channel> {
+    if (this.channel) return this.channel;
+
     const taskMeta = this.taskMeta;
     const prefetchSize = taskMeta.concurrency || this.config.globalConcurrency;
 
@@ -144,6 +140,15 @@ export class Consumer {
 
     log('Begin create channel');
     const channel = await conn.createChannel();
+
+    channel.on('error', (err) => {
+      console.error(`Channel error ${err} stack: ${err.stack}`);
+    });
+
+    channel.on('close', () => {
+      console.log('Channel close');
+      this.channel = null;
+    });
 
     const options: amqp.Options.AssertQueue = {
       durable: true,
@@ -172,16 +177,40 @@ export class Consumer {
     return {};
   }
 
-  private async checkConnection(): Promise<void> {
+  private async checkConnection(enableInterval?: boolean): Promise<void> {
     log('Check connection');
-    if (!this.channel && !this.connecting) {
-      this.connecting = true;
-      await this.createChannel();
 
-      this.connecting = false;
-      this.consume();
+    if (enableInterval) {
+      this.checkJob = setInterval(this.checkConnection.bind(this), 500);
     }
-    setTimeout(this.checkConnection.bind(this), 1000);
+
+    if (!Consumer.connection) {
+      if (Consumer.isConnecting) return;
+
+      Consumer.isConnecting = true;
+      try {
+        await this.createConnection();
+      } catch (e) {
+        Consumer.isConnecting = false;
+        throw e;
+      }
+      Consumer.isConnecting = false;
+    }
+
+    if (!this.channel) {
+      if (this.isChannelCreating) return;
+
+      try {
+        await this.createChannel();
+      } catch (e) {
+        this.isChannelCreating = false;
+        throw e;
+      }
+
+      this.isChannelCreating = false;
+
+      await this.consume();
+    }
   }
 
   private async taskRetry(task: Task): Promise<number> {
@@ -205,7 +234,7 @@ export class Consumer {
 
   private logSuccess(msg: amqp.Message, startTime: number, result: object): void {
     this.config.logger.info({
-      taskType: this.taskMeta.name,
+      taskName: this.taskMeta.name,
       data: msg.content,
       duration: Date.now() - startTime,
       result: JSON.stringify(result),
@@ -218,7 +247,7 @@ export class Consumer {
 
   private logFail(msg: amqp.Message, startTime: number, e: Error): void {
     this.config.logger.error({
-      taskType: this.taskMeta.name,
+      taskName: this.taskMeta.name,
       data: msg.content,
       duration: Date.now() - startTime,
       error: e,
@@ -228,6 +257,13 @@ export class Consumer {
         properties: msg.properties,
       },
     });
+  }
+
+  public async cancel(): Promise<void> {
+    if (!this.channel || !this.consumerTag) return;
+    this.channel.cancel(this.consumerTag);
+    this.channel = null;
+    this.consumerTag = null;
   }
 
   private async consume(): Promise<any> {
@@ -290,16 +326,18 @@ export class Consumer {
       }
     }
 
-    channel.consume(this.queueName, processFuncWrap, {
+    const { consumerTag } = await channel.consume(this.queueName, processFuncWrap, {
       noAck: false,
     });
+
+    this.consumerTag = consumerTag;
   }
 
   register(taskMeta: TaskMeta, processFunc: ProcessFunc) {
     this.taskMeta = taskMeta;
     this.processFunc = processFunc;
 
-    this.checkConnection();
+    this.checkConnection(true);
 
     return this;
   }

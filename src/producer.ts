@@ -78,32 +78,36 @@ export class Producer {
     this.config = Object.assign({}, defaultConfig, config);
   }
 
-  private async getConnection(): Promise<amqp.Connection> {
+  private async createConnection(): Promise<amqp.Connection> {
     const url = this.config.url;
     this.connection = await amqp.connect(url, this.config.socketOptions);
 
     this.connection.on('error', (err) => {
       console.error(`Connection error ${err} stack: ${err.stack}`);
     });
+
     this.connection.on('close', () => {
-      console.error('Connection close');
+      console.log('Connection close');
       this.connection = null;
-      this.channel = null;
     });
-    this.connection.on('blocked', () => {
-      console.error('Connection blocked');
-    });
-    this.connection.on('unblocked', () => {
-      console.error('Connection unblocked');
-    });
+
     return this.connection;
   }
 
   private async createChannel(): Promise<amqp.ConfirmChannel> {
-    const conn = await this.getConnection();
+    const conn = await this.createConnection();
 
     log('Created connection !!!');
     this.channel = await conn.createConfirmChannel();
+
+    this.channel.on('error', (err) => {
+      console.error(`Channel error ${err} stack: ${err.stack}`);
+    });
+
+    this.channel.on('close', () => {
+      console.log('Channel close');
+      this.channel = null;
+    });
 
     log('Created channel !!!');
     await this.channel.assertExchange(this.config.exchangeName, 'direct');

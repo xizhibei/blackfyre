@@ -15,7 +15,7 @@ async function testRetry(t, retryStrategy: RetryStrategy) {
   const {promise, doneOne} = waitUtilDone(maxRetry + 1);
 
   const consumer = new Consumer();
-  await consumer.createConnection();
+
   consumer.register(<TaskMeta>{
     name: taskName,
     concurrency: 20,

@@ -28,7 +28,6 @@ test('#task preProcess', async (t) => {
     },
   });
 
-  await consumer.createConnection();
   consumer.register(<TaskMeta>{
     name: taskName,
     concurrency: 20,
@@ -60,7 +59,6 @@ test('#task postProcess: success', async (t) => {
     },
   });
 
-  await consumer.createConnection();
   consumer.register(<TaskMeta>{
     name: taskName,
     concurrency: 20,
@@ -92,7 +90,6 @@ test('#task postProcess: fail', async (t) => {
     },
   });
 
-  await consumer.createConnection();
   consumer.register(<TaskMeta>{
     name: taskName,
     concurrency: 20,
@@ -131,7 +128,6 @@ test('#task hook for prom client', async (t) => {
 
   const { promise, doneOne } = waitUtilDone(1);
 
-  await consumer.createConnection();
   consumer.register(<TaskMeta>{
     name: taskName,
     concurrency: 20,
@@ -163,7 +159,6 @@ test('#task apm wrap', async (t) => {
 
   const { promise, doneOne } = waitUtilDone(1);
 
-  await consumer.createConnection();
   consumer.register(<TaskMeta>{
     name: taskName,
     concurrency: 20,
