@@ -8,9 +8,11 @@ node_js:
 cache:
   directories:
     - $HOME/.npm
+    - $HOME/.yarn-cache
 
 services:
    - rabbitmq
 
 script:
+  - npm run lint
   - npm run coverage-ci
