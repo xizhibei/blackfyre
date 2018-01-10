@@ -16,7 +16,7 @@ async function testRetry(t, retryStrategy: RetryStrategy) {
 
   const consumer = new Consumer();
 
-  consumer.register(<TaskMeta>{
+  consumer.registerTask(<TaskMeta>{
     name: taskName,
     concurrency: 20,
   }, async (data) => {

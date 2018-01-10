@@ -28,7 +28,7 @@ test('#task preProcess', async (t) => {
     },
   });
 
-  consumer.register(<TaskMeta>{
+  consumer.registerTask(<TaskMeta>{
     name: taskName,
     concurrency: 20,
   }, async (data) => {
@@ -59,7 +59,7 @@ test('#task postProcess: success', async (t) => {
     },
   });
 
-  consumer.register(<TaskMeta>{
+  consumer.registerTask(<TaskMeta>{
     name: taskName,
     concurrency: 20,
   }, async (data) => {
@@ -90,7 +90,7 @@ test('#task postProcess: fail', async (t) => {
     },
   });
 
-  consumer.register(<TaskMeta>{
+  consumer.registerTask(<TaskMeta>{
     name: taskName,
     concurrency: 20,
   }, async (data) => {
@@ -128,7 +128,7 @@ test('#task hook for prom client', async (t) => {
 
   const { promise, doneOne } = waitUtilDone(1);
 
-  consumer.register(<TaskMeta>{
+  consumer.registerTask(<TaskMeta>{
     name: taskName,
     concurrency: 20,
   }, async (data) => {
@@ -143,6 +143,8 @@ test('#task hook for prom client', async (t) => {
 
   await promise;
 
+  await Promise.delay(100);
+
   const metric = promClient.register.getSingleMetricAsString('job_summary');
   t.regex(metric, /taskName="hook-test-prom-client",state="succeed"/i);
 });
@@ -152,14 +154,14 @@ test('#task apm wrap', async (t) => {
   t.plan(1);
 
   const consumer = new Consumer(<ConsumerConfig>{
-    processWrap(func: ProcessFunc): ProcessFunc {
+    processWrap(taskName: string, func: ProcessFunc): ProcessFunc {
       return func;
     },
   });
 
   const { promise, doneOne } = waitUtilDone(1);
 
-  consumer.register(<TaskMeta>{
+  consumer.registerTask(<TaskMeta>{
     name: taskName,
     concurrency: 20,
   }, async (data) => {

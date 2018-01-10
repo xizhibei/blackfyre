@@ -11,28 +11,34 @@ test('#worker health check', async (t) => {
   const taskName = 'test-health-check';
   const consumer = new Consumer();
 
-  consumer.register(<TaskMeta>{
+  consumer.registerTask(<TaskMeta>{
     name: taskName,
     concurrency: 20,
   }, async (data) => {
   });
 
-  await Promise.delay(100);
+  t.plan(2);
+  const { promise, doneOne } = waitUtilDone(1);
 
-  const result = await consumer.checkHealth();
-  t.is(result.queue, 'test-health-check_queue');
-  t.is(result.consumerCount, 1);
+  consumer.on('ready', async () => {
+    const [result] = await consumer.checkHealth();
+    t.is(result.queue, 'test-health-check_queue');
+    t.is(result.consumerCount, 1);
+    doneOne();
+  });
+
+  await promise;
 });
 
 test('#worker wait producer to be ready', async (t) => {
   const taskName = 'test-producer-ready';
 
-  t.plan(1);
-  const { promise, doneOne } = waitUtilDone(1);
+  t.plan(2);
+  const { promise, doneOne } = waitUtilDone(2);
 
   const consumer = new Consumer();
 
-  consumer.register(<TaskMeta>{
+  consumer.registerTask(<TaskMeta>{
     name: taskName,
     concurrency: 20,
   }, async (data) => {
@@ -41,11 +47,42 @@ test('#worker wait producer to be ready', async (t) => {
   });
 
   const producer = await new Producer();
-  await Promise.delay(100);
+
   producer.createTask(<Task>{
     name: taskName,
     body: { test: 'test' }
   });
+
+  producer.on('ready', () => {
+    producer.createTask(<Task>{
+      name: taskName,
+      body: { test: 'test' }
+    });
+  });
+
+  await promise;
+});
+
+test('#consumer register race', async (t) => {
+  const taskName = 'test-producer-ready';
+
+  t.plan(5);
+  const { promise, doneOne } = waitUtilDone(5);
+
+  const consumer = new Consumer();
+  consumer.on('ready', (taskName) => {
+    t.true(true);
+    doneOne();
+  });
+
+  await Promise.map(_.times(5), async (i) => {
+    return consumer.registerTask(<TaskMeta>{
+      name: taskName + i,
+      concurrency: 20,
+    }, async (data) => {
+    });
+  });
+
   await promise;
 });
 
@@ -57,7 +94,7 @@ test('#normal task', async (t) => {
 
   const consumer = new Consumer();
 
-  consumer.register(<TaskMeta>{
+  consumer.registerTask(<TaskMeta>{
     name: taskName,
     concurrency: 20,
   }, async (data) => {
@@ -81,7 +118,7 @@ test('#priority task', async (t) => {
   const { promise, doneOne } = waitUtilDone(1);
 
   const consumer = new Consumer();
-  consumer.register(<TaskMeta>{
+  consumer.registerTask(<TaskMeta>{
     name: taskName,
     concurrency: 20,
     maxPriority: 20,
@@ -107,7 +144,7 @@ test('#delay task', async t => {
   const { promise, doneOne } = waitUtilDone(1);
 
   const consumer = new Consumer();
-  consumer.register(<TaskMeta>{
+  consumer.registerTask(<TaskMeta>{
     name: taskName,
     concurrency: 20,
   }, async (data) => {

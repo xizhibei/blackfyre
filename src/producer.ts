@@ -1,3 +1,5 @@
+import { EventEmitter } from 'events';
+
 import * as _ from 'lodash';
 import * as amqp from 'amqplib';
 import * as debug from 'debug';
@@ -13,13 +15,24 @@ import {
   getDelayQueueOptions,
 } from './helper';
 
-const log = debug('amqp-worker:producer');
+const log = debug('blackfyre:producer');
+const eventLog = debug('blackfyre:consumer:event');
 
 export interface ProducerConfig {
   /**
    * Amqp exchange name, please be sure it is same as it in the consumer, default 'worker-exchange'
    */
   exchangeName?: string;
+
+  /**
+   *  Amqp exchange name, default: 'direct'
+   */
+  exchangeType?: string;
+
+  /**
+   *  Options for assert AssertExchange
+   */
+  assertExchangeOptions?: amqp.Options.AssertExchange;
 
   /**
    * Test mode, useful for testing, default false
@@ -56,19 +69,22 @@ interface PublishFunc {
   (channel: amqp.ConfirmChannel): Promise<any>;
 }
 
-export class Producer {
-  private connection: amqp.Connection;
+export class Producer extends EventEmitter {
+  protected connection: amqp.Connection;
   private channel: amqp.ConfirmChannel = null;
-  private connecting: boolean = false;
+  private isConnecting: boolean = false;
   private waitQueue: any[] = [];
   private config: ProducerConfig;
 
   public createdTasks: Task[] = [];
 
   constructor(config: ProducerConfig = {}) {
+    super();
 
     const defaultConfig: ProducerConfig = {
       exchangeName: 'worker-exchange',
+      exchangeType: 'direct',
+      assertExchangeOptions: null,
       isTestMode: false,
       url: 'amqp://localhost',
       globalMaxRetry: 0,
@@ -83,11 +99,13 @@ export class Producer {
     this.connection = await amqp.connect(url, this.config.socketOptions);
 
     this.connection.on('error', (err) => {
-      console.error(`Connection error ${err} stack: ${err.stack}`);
+      this.emit('conn-error', err);
+      eventLog(`Connection error ${err} stack: ${err.stack}`);
     });
 
     this.connection.on('close', () => {
-      console.log('Connection close');
+      this.emit('conn-close');
+      eventLog('Connection close');
       this.connection = null;
     });
 
@@ -98,20 +116,31 @@ export class Producer {
     const conn = await this.createConnection();
 
     log('Created connection !!!');
-    this.channel = await conn.createConfirmChannel();
+    const channel = await conn.createConfirmChannel();
 
-    this.channel.on('error', (err) => {
-      console.error(`Channel error ${err} stack: ${err.stack}`);
+    channel.on('error', (err) => {
+      this.emit('channel-error', err);
+      eventLog(`Channel error ${err} stack: ${err.stack}`);
     });
 
-    this.channel.on('close', () => {
-      console.log('Channel close');
+    channel.on('close', () => {
+      this.emit('channel-close');
+      eventLog('Channel close');
       this.channel = null;
     });
 
     log('Created channel !!!');
-    await this.channel.assertExchange(this.config.exchangeName, 'direct');
-    return this.channel;
+    await channel.assertExchange(
+      this.config.exchangeName,
+      this.config.exchangeType,
+      this.config.assertExchangeOptions,
+    );
+
+    this.channel = channel;
+
+    this.emit('channel-created', channel);
+
+    return channel;
   }
 
   private async drainQueue(): Promise<void> {
@@ -125,18 +154,24 @@ export class Producer {
   private async getChannel(): Promise<amqp.ConfirmChannel> {
     log(`Wait queue length: ${this.waitQueue.length}`);
     if (!this.channel) {
-      await this.createChannel();
+      try {
+        await this.createChannel();
+      } catch (e) {
+        this.emit('error', e);
+        return;
+      }
     }
     await this.drainQueue();
+    this.emit('ready');
     return this.channel;
   }
 
   private getPushlistFunc(task: Task): PublishFunc {
-    const _this = this;
+    const that = this;
     return async function publish(ch) {
       const data = JSON.stringify(task);
 
-      const exchangeName = _this.config.exchangeName;
+      const exchangeName = that.config.exchangeName;
       const routingKey = task.name;
 
       const publishOptions: amqp.Options.Publish = {
@@ -156,6 +191,7 @@ export class Producer {
 
       return new Promise((resolve, reject) => {
         return ch.publish(exchangeName, routingKey, new Buffer(data), publishOptions, (err, ok) => {
+          /* istanbul ignore if */
           if (err) return reject(err);
           return resolve(ok);
         });
@@ -176,8 +212,7 @@ export class Producer {
       return;
     }
 
-    if (!this.connecting) {
-      this.connecting = true;
+    if (!this.isConnecting && !this.connection) {
       this.getChannel();
     }
 
@@ -190,5 +225,19 @@ export class Producer {
         return publish(channel).then(resolve, reject);
       });
     });
+  }
+
+  public async closeChannel(): Promise<void> {
+    /* istanbul ignore else */
+    if (this.channel) {
+      await this.channel.close();
+    }
+  }
+
+  public async closeConnection(): Promise<void> {
+    /* istanbul ignore else */
+    if (this.connection) {
+      await this.connection.close();
+    }
   }
 }
