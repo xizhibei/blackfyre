@@ -48,3 +48,36 @@ test('#retry task exp', async t => {
 test('#retry task lne', async t => {
   await testRetry(t, RetryStrategy.LINEAR);
 });
+
+class CustomError extends Error {
+  noRetry: boolean = true;
+}
+
+test('#retry task abort', async t => {
+  const taskName = `test-retry-abort`;
+
+  const maxRetry = 5;
+  t.plan(1);
+  const {promise, doneOne} = waitUtilDone(1);
+
+  const consumer = new Consumer();
+
+  consumer.registerTask(<TaskMeta>{
+    name: taskName,
+    concurrency: 20,
+  }, async (data) => {
+    t.true(true);
+    doneOne();
+    throw new CustomError('test');
+  });
+
+  await (new Producer())
+    .createTask(<Task>{
+      name: taskName,
+      body: { test: 'test' },
+      initDelayMs: 50,
+      maxRetry,
+    });
+
+  await promise;
+});
