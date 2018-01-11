@@ -38,8 +38,7 @@ npm install blackfyre
 ```ts
 const consumer = new Consumer();
 
-await consumer.createConnection();
-consumer.register(<TaskMeta>{
+consumer.registerTask(<TaskMeta>{
     name: taskName,
     concurrency: 20,
 }, async (data) => {
@@ -58,7 +57,7 @@ await (new Producer())
 import * as newrelic from 'newrelic';
 
 const consumer = new Consumer(<ConsumerConfig>{
-    processWrap(processFunc): ProcessFunc {
+    processWrap(taskName: string, func: ProcessFunc): ProcessFunc {
         return newrelic.startBackgroundTransaction(taskName, async (data: any, task: Task) => {
             try {
                 const result = await processFunc(data, task);
