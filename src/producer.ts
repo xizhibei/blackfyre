@@ -4,6 +4,7 @@ import * as _ from 'lodash';
 import * as amqp from 'amqplib';
 import * as debug from 'debug';
 import * as uuid from 'uuid';
+import * as Bluebird from 'bluebird';
 
 import {
   Task,
@@ -17,6 +18,8 @@ import {
 
 const log = debug('blackfyre:producer');
 const eventLog = debug('blackfyre:consumer:event');
+
+Promise = Bluebird as any;
 
 export interface ProducerConfig {
   /**

@@ -4,6 +4,7 @@ import { setInterval, clearInterval } from 'timers';
 import * as _ from 'lodash';
 import * as amqp from 'amqplib';
 import * as debug from 'debug';
+import * as Bluebird from 'bluebird';
 
 import {
   Task,
@@ -17,6 +18,8 @@ import {
   getDelayQueue,
   getDelayQueueOptions,
 } from './helper';
+
+Promise = Bluebird as any;
 
 const log = debug('blackfyre:consumer');
 const eventLog = debug('blackfyre:consumer:event');
@@ -286,7 +289,7 @@ export class Consumer extends EventEmitter {
   private logSuccess(msg: amqp.Message, startTime: number, result: object): void {
     this.config.logger.info({
       taskName: msg.fields.routingKey,
-      data: msg.content,
+      data: msg.content.toString(),
       duration: Date.now() - startTime,
       result: JSON.stringify(result),
       amqp: {
@@ -299,7 +302,7 @@ export class Consumer extends EventEmitter {
   private logFail(msg: amqp.Message, startTime: number, e: Error): void {
     this.config.logger.error({
       taskName: msg.fields.routingKey,
-      data: msg.content,
+      data: msg.content.toString(),
       duration: Date.now() - startTime,
       error: e,
       errorStacks: e.stack && e.stack.split('\n'),
