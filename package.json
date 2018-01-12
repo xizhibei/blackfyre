@@ -5,7 +5,7 @@
   "main": "dist/src/index.js",
   "typings": "dist/src/index.d.ts",
   "scripts": {
-    "test": "tsc && ava",
+    "test": "tsc && ava -v",
     "coverage": "nyc npm test",
     "coverage-ci": "nyc npm test && nyc report --reporter=text-lcov | coveralls",
     "build": "tsc",
@@ -40,7 +40,7 @@
     "files": [
       "dist/test/**/*.test.js"
     ],
-    "timeout": "5s"
+    "timeout": "10s"
   },
   "nyc": {
     "extension": [

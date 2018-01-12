@@ -10,7 +10,7 @@ Promise = Bluebird as any;
 async function testRetry(t, retryStrategy: RetryStrategy) {
   const taskName = `test-retry-${retryStrategy}`;
 
-  const maxRetry = 5;
+  const maxRetry = 3;
   t.plan(maxRetry + 1);
   const { promise, doneOne } = waitUtilDone(maxRetry + 1);
 
@@ -30,7 +30,7 @@ async function testRetry(t, retryStrategy: RetryStrategy) {
       .createTask(<Task>{
         name: taskName,
         body: { test: 'test' },
-        initDelayMs: 50,
+        initDelayMs: 100,
         maxRetry,
         retryStrategy,
       });
