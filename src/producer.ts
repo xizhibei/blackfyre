@@ -16,6 +16,9 @@ import {
   getDelayQueueOptions,
 } from './helper';
 
+import { BackendType, Backend } from './backends/interface';
+import { MongodbBackend, MongodbBackendOptions } from './backends/mongodb';
+
 const log = debug('blackfyre:producer');
 const eventLog = debug('blackfyre:consumer:event');
 
@@ -52,6 +55,10 @@ export interface ProducerConfig {
    */
   socketOptions?: amqp.Options.Connect;
 
+  backendType?: string;
+
+  backendOptions?: MongodbBackendOptions;
+
   /**
    * Global max retry for task, will be override by task metadata, default: 0
    */
@@ -79,6 +86,8 @@ export class Producer extends EventEmitter {
   private waitQueue: any[] = [];
   private config: ProducerConfig;
 
+  private backend: Backend;
+
   public createdTasks: Task[] = [];
 
   constructor(config: ProducerConfig = {}) {
@@ -93,8 +102,14 @@ export class Producer extends EventEmitter {
       globalMaxRetry: 0,
       globalInitDelayMs: 100,
       globalretryStrategy: RetryStrategy.FIBONACCI,
+      backendType: BackendType.MongoDB,
+      backendOptions: null,
     };
     this.config = Object.assign({}, defaultConfig, config);
+
+    if (this.config.backendType === BackendType.MongoDB) {
+      this.backend = new MongodbBackend(this.config.backendOptions);
+    }
   }
 
   private async createConnection(): Promise<amqp.Connection> {
@@ -191,6 +206,8 @@ export class Producer extends EventEmitter {
 
         return ch.sendToQueue(delayQueue, new Buffer(data), publishOptions);
       }
+
+      await that.backend.setTaskStatePending(task);
 
       return new Promise((resolve, reject) => {
         return ch.publish(exchangeName, routingKey, new Buffer(data), publishOptions, (err, ok) => {

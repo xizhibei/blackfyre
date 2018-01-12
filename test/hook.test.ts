@@ -84,7 +84,7 @@ test('#task postProcess: fail', async (t) => {
 
   const consumer = new Consumer(<ConsumerConfig>{
     postProcess(task: Task, state: TaskState, errorOrResult: any): void {
-      t.is(state, TaskState.PERMANENT_FAILED);
+      t.is(state, TaskState.FAILED);
       t.is(errorOrResult.message, 'test');
       doneOne();
     },

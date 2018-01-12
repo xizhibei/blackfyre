@@ -72,17 +72,32 @@ export enum RetryStrategy {
 
 export enum TaskState {
   /**
+   * The task just sent
+   */
+  PENDING = 'pending',
+
+  /**
+   * The task received by consumer
+   */
+  RECEIVED = 'received',
+
+  /**
+   * Task is started
+   */
+  STARTED = 'started',
+
+  /**
+   * Task is being retried
+   */
+  RETRYING = 'retrying',
+
+  /**
    * The task is succeed
    */
   SUCCEED = 'succeed',
 
   /**
-   * The task is failed, and will be retried
+   * The task is failed, and won't be retried
    */
   FAILED = 'failed',
-
-  /**
-   * The task is permanent failed, won't be retried
-   */
-  PERMANENT_FAILED = 'permanent-failed',
 }

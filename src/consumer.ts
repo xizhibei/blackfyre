@@ -19,6 +19,9 @@ import {
   getDelayQueueOptions,
 } from './helper';
 
+import { BackendType, Backend } from './backends/interface';
+import { MongodbBackend, MongodbBackendOptions } from './backends/mongodb';
+
 Promise = Bluebird as any;
 
 const log = debug('blackfyre:consumer');
@@ -63,6 +66,10 @@ export interface ConsumerConfig {
    *  Socket options for amqp connec
    */
   socketOptions?: any;
+
+  backendType?: BackendType;
+
+  backendOptions?: MongodbBackendOptions;
 
   /**
    *  Logger instance
@@ -112,6 +119,8 @@ export class Consumer extends EventEmitter {
   private taskRegisterMap: TaskRegisterMap = {};
   private waitQueue: TaskRegister[] = [];
 
+  private backend: Backend;
+
   public constructor(config: ConsumerConfig = {}) {
     super();
 
@@ -127,8 +136,14 @@ export class Consumer extends EventEmitter {
       assertExchangeOptions: null,
       url: 'amqp://localhost',
       globalConcurrency: 256,
+      backendType: BackendType.MongoDB,
+      backendOptions: null,
     };
     this.config = Object.assign({}, defaultConfig, config);
+
+    if (this.config.backendType === BackendType.MongoDB) {
+      this.backend = new MongodbBackend(this.config.backendOptions);
+    }
 
     this.checkJob = setInterval(this.checkConnection.bind(this), 500);
   }
@@ -337,13 +352,17 @@ export class Consumer extends EventEmitter {
         return;
       }
 
+      await that.backend.setTaskStateReceived(task);
+
       if (that.config.preProcess) {
         that.config.preProcess.bind(this);
         that.config.preProcess(task);
       }
 
       try {
+        await that.backend.setTaskStateStarted(task);
         const result = await processFunc(task.body, task);
+        await that.backend.setTaskStateSucceed(task, result);
 
         if (that.config.postProcess) {
           that.config.postProcess.bind(this);
@@ -354,15 +373,20 @@ export class Consumer extends EventEmitter {
 
         channel.ack(msg);
       } catch (e) {
+
         if (!e.noRetry) {
           e.retryLeft = await that.taskRetry(taskRegister, task);
           e.state = TaskState.FAILED;
 
           if (e.retryLeft === 0) {
-            e.state = TaskState.PERMANENT_FAILED;
+            e.state = TaskState.FAILED;
+            await that.backend.setTaskStateFailed(task, e);
+          } else {
+            await that.backend.setTaskStateRetrying(task, e);
           }
         } else {
-          e.state = TaskState.PERMANENT_FAILED;
+          e.state = TaskState.FAILED;
+          await that.backend.setTaskStateFailed(task, e);
         }
 
         if (that.config.postProcess) {
