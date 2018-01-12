@@ -7,50 +7,41 @@ import {
   Producer,
   Consumer,
   Task,
-  ConsumerConfig,
+  ConsumerOptions,
   TaskState,
   ProcessFunc,
   TaskMeta,
-  ProducerConfig,
+  ProducerOptions,
 } from '../src/index';
 
 import { waitUtilDone } from './utils';
+import { AMQPBrokerOptions } from '../src/brokers/amqp';
 
 Promise = Bluebird as any;
 
-class NewConsumer extends Consumer {
-  public async emitConnectionError() {
-    this.connection.emit('error', new Error('test'));
-  }
-}
-
-class NewProducer extends Producer {
-  public async emitConnectionError() {
-    this.connection.emit('error', new Error('test'));
-  }
-}
-
-test('#events producer close', async (t) => {
+test.skip('#events producer close', async (t) => {
   const taskName = 'event-test-producer';
 
-  const producer = new NewProducer();
+  const producer = new Producer();
 
-  t.plan(3);
-  const { promise, doneOne } = waitUtilDone(3);
-  producer.on('channel-close', () => {
+  t.plan(2);
+  const { promise, doneOne } = waitUtilDone(2);
+  producer.on('close', () => {
     t.true(true);
     doneOne();
   });
 
-  producer.on('conn-close', () => {
-    t.true(true);
-    doneOne();
-  });
+  producer.on('error', () => {
+
+  })
 
   producer.on('ready', async () => {
+    try {
+      await producer.close();
+    } catch (e) {
+
+    }
     t.true(true);
-    await producer.closeChannel();
-    await producer.closeConnection();
     doneOne();
   });
 
@@ -66,8 +57,10 @@ test('#events producer close', async (t) => {
 test('#events producer channel error', async (t) => {
   const taskName = 'event-test-producer';
 
-  const producerDefault = new NewProducer(<ConsumerConfig>{
-    exchangeType: 'direct',
+  const producerDefault = new Producer(<ConsumerOptions>{
+    brokerOptions: <AMQPBrokerOptions>{
+      exchangeType: 'direct',
+    },
   });
   await producerDefault
     .createTask(<Task>{
@@ -75,17 +68,14 @@ test('#events producer channel error', async (t) => {
       body: { test: 'test' },
     });
 
-  const producer = new NewProducer(<ProducerConfig>{
-    exchangeType: 'topic',
+  const producer = new Producer(<ProducerOptions>{
+    brokerOptions: <AMQPBrokerOptions>{
+      exchangeType: 'topic',
+    },
   });
 
   t.plan(2);
   const { promise, doneOne } = waitUtilDone(2);
-
-  producer.on('channel-error', () => {
-    t.true(true);
-    doneOne();
-  });
 
   producer.on('error', () => {
     t.true(true);
@@ -101,56 +91,25 @@ test('#events producer channel error', async (t) => {
   await promise;
 });
 
-test('#events producer connection error', async (t) => {
-  const taskName = 'event-test-producer';
-
-  const producer = new NewProducer();
-
-  t.plan(2);
-  const { promise, doneOne } = waitUtilDone(2);
-
-  producer.on('conn-error', () => {
-    t.true(true);
-    doneOne();
-  });
-
-  producer.on('ready', async () => {
-    t.true(true);
-    await producer.emitConnectionError();
-    doneOne();
-  });
-
-  producer
-    .createTask(<Task>{
-      name: taskName,
-      body: { test: 'test' },
-    });
-
-  await promise;
-});
-
 test('#events consumer close', async (t) => {
   const taskName = 'event-test-consumer';
 
-  const consumer = new NewConsumer();
+  const consumer = new Consumer();
 
   t.plan(3);
   const { promise, doneOne } = waitUtilDone(2);
-  consumer.on('channel-close', () => {
-    t.true(true);
-    doneOne();
-  });
-
-  consumer.on('conn-close', () => {
+  consumer.on('close', () => {
     t.true(true);
     doneOne();
   });
 
   consumer.on('ready', async () => {
-    t.true(true);
+    try {
+      await consumer.close();
+    } catch (e) {
 
-    await consumer.closeChannel(taskName);
-    await consumer.closeConnection();
+    }
+    t.true(true);
     doneOne();
   });
 
@@ -166,8 +125,10 @@ test('#events consumer close', async (t) => {
 test('#events consumer channel error', async (t) => {
   const taskName = 'event-test-consumer';
 
-  const consumerDefault = new NewConsumer(<ConsumerConfig>{
-    exchangeType: 'direct',
+  const consumerDefault = new Consumer(<ConsumerOptions>{
+    brokerOptions: <AMQPBrokerOptions>{
+      exchangeType: 'direct',
+    },
   });
 
   consumerDefault.registerTask(<TaskMeta>{
@@ -176,49 +137,17 @@ test('#events consumer channel error', async (t) => {
   }, async (data) => {
   });
 
-  const consumer = new NewConsumer(<ConsumerConfig>{
-    exchangeType: 'topic',
+  const consumer = new Consumer(<ConsumerOptions>{
+    brokerOptions: <AMQPBrokerOptions>{
+      exchangeType: 'topic',
+    },
   });
 
-  t.plan(2);
-  const { promise, doneOne } = waitUtilDone(2);
-
-  consumer.on('channel-error', () => {
-    t.true(true);
-    doneOne();
-  });
+  t.plan(1);
+  const { promise, doneOne } = waitUtilDone(1);
 
   consumer.on('error', () => {
     t.true(true);
-    doneOne();
-  });
-
-  consumer.registerTask(<TaskMeta>{
-    name: taskName,
-    concurrency: 20,
-  }, async (data) => {
-  });
-
-  await promise;
-});
-
-test('#events consumer connection error', async (t) => {
-  const taskName = 'event-test-consumer';
-
-  const consumer = new NewConsumer();
-
-  t.plan(2);
-  const { promise, doneOne } = waitUtilDone(2);
-
-  consumer.on('conn-error', () => {
-    t.true(true);
-    doneOne();
-  });
-
-  consumer.on('ready', async () => {
-    t.true(true);
-
-    await consumer.emitConnectionError();
     doneOne();
   });
 

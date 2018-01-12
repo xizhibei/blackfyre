@@ -21,9 +21,10 @@ test('#worker health check', async (t) => {
   const { promise, doneOne } = waitUtilDone(1);
 
   consumer.on('ready', async () => {
-    const [result] = await consumer.checkHealth();
-    t.is(result.queue, 'test-health-check_queue');
-    t.is(result.consumerCount, 1);
+    const result = await consumer.checkHealth();
+    const [r] = result.broker.consumer;
+    t.is(r.queue, 'test-health-check_queue');
+    t.is(r.consumerCount, 1);
     doneOne();
   });
 
@@ -48,16 +49,16 @@ test('#worker wait producer to be ready', async (t) => {
 
   const producer = await new Producer();
 
-  producer.createTask(<Task>{
-    name: taskName,
-    body: { test: 'test' }
-  });
-
   producer.on('ready', () => {
     producer.createTask(<Task>{
       name: taskName,
       body: { test: 'test' }
     });
+  });
+
+  producer.createTask(<Task>{
+    name: taskName,
+    body: { test: 'test' }
   });
 
   await promise;

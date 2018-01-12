@@ -9,13 +9,13 @@ import {
   Task,
   RetryStrategy,
   TaskMeta,
-  ProducerConfig,
+  ProducerOptions,
 } from '../src/index';
 
 Promise = Bluebird as any;
 
 test('#test mode', async (t) => {
-  const producer = new Producer(<ProducerConfig>{
+  const producer = new Producer(<ProducerOptions>{
     isTestMode: true,
   });
 

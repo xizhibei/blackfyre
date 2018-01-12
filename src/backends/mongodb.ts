@@ -3,6 +3,7 @@ import * as mongodb from 'mongodb';
 
 import { TaskState } from '../common';
 import { Backend, TaskStore } from './interface';
+import { registerEvent } from '../helper';
 
 export interface MongodbBackendOptions {
   url?: string;
@@ -31,14 +32,15 @@ export class MongodbBackend extends Backend {
   private async getCollection(): Promise<mongodb.Collection> {
     if (!this.client) {
       this.client = await mongodb.MongoClient.connect(this.options.url, this.options.mongoClientOptions);
+      registerEvent(['error', 'close'], this.client, this);
     }
     const coll = this.client.db(this.options.dbName).collection<TaskState>(this.options.collectionName);
     await coll.createIndex({
       state: 1,
     }, {
-      background: true,
-      expireAfterSeconds: this.options.resultsExpireIn,
-    });
+        background: true,
+        expireAfterSeconds: this.options.resultsExpireIn,
+      });
     return coll;
   }
 
@@ -51,10 +53,10 @@ export class MongodbBackend extends Backend {
     await coll.updateOne({
       _id: task.id,
     }, {
-      $set: task,
-    }, <mongodb.ReplaceOneOptions>{
-      upsert: true,
-    });
+        $set: task,
+      }, <mongodb.ReplaceOneOptions>{
+        upsert: true,
+      });
   }
 
   async setTaskStatePending(task: TaskStore): Promise<void> {
@@ -106,9 +108,14 @@ export class MongodbBackend extends Backend {
     });
   }
 
-  async checkHealth() : Promise<any> {
+  async checkHealth(): Promise<any> {
     if (!this.client) return {};
     return this.client.db(this.options.dbName).admin().ping();
   }
 
+  async close(): Promise<any> {
+    if (this.client) {
+      this.client.close();
+    }
+  }
 }

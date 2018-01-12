@@ -56,3 +56,8 @@ export function getRetryDelayMs(task: Task): number {
   return strategy(task);
 }
 
+export function registerEvent(events, source, target) {
+  events.forEach(e => {
+    source.on(e, (...args) => target.emit(e, ...args));
+  });
+}

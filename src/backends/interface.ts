@@ -1,3 +1,4 @@
+import { EventEmitter } from 'events';
 import { Task, TaskState } from '../common';
 
 export interface TaskStore extends Task {
@@ -9,7 +10,7 @@ export interface TaskStore extends Task {
   updated?: Date;
 }
 
-export abstract class Backend {
+export abstract class Backend extends EventEmitter {
   abstract setTaskStatePending(task: TaskStore): Promise<void>;
   abstract setTaskStateReceived(task: TaskStore): Promise<void>;
   abstract setTaskStateStarted(task: TaskStore): Promise<void>;
@@ -20,7 +21,8 @@ export abstract class Backend {
   abstract getTask(taskID: string): Promise<TaskStore>;
   abstract removeTask(taskID: string): Promise<void>;
 
-  abstract checkHealth(): Promise<void>;
+  abstract checkHealth(): Promise<any>;
+  abstract close(): Promise<any>;
 }
 
 export enum BackendType {

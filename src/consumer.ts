@@ -10,17 +10,13 @@ import {
   Task,
   TaskMeta,
   TaskState,
-  RetryStrategy,
 } from './common';
-
-import {
-  getRetryDelayMs,
-  getDelayQueue,
-  getDelayQueueOptions,
-} from './helper';
 
 import { BackendType, Backend } from './backends/interface';
 import { MongodbBackend, MongodbBackendOptions } from './backends/mongodb';
+import { BrokerType, Broker } from './brokers/interface';
+import { AMQPBroker, AMQPBrokerOptions } from './brokers/amqp';
+import { registerEvent } from './helper';
 
 Promise = Bluebird as any;
 
@@ -36,39 +32,25 @@ export interface ProcessFunc {
   (data: any, task?: Task): Promise<any>;
 }
 
-export interface ConsumerConfig {
+export interface ConsumerOptions {
   /**
-   *  The queue name is in the form of `${taskName}_${queueSuffix}`, default 'queue'
+   *  Broker type, default: AMQP
    */
-  queueSuffix?: string;
+  brokerType?: BrokerType;
 
   /**
-   *  Amqp exchange name, please be sure it is same as it in the producer, default 'worker-exchange'
+   *  Broker options
    */
-  exchangeName?: string;
+  brokerOptions?: AMQPBrokerOptions;
 
   /**
-   *  Amqp exchange name, default: 'direct'
+   *  Backend type, default: MongoDB
    */
-  exchangeType?: string;
-
-  /**
-   *  Options for assert AssertExchange
-   */
-  assertExchangeOptions?: amqp.Options.AssertExchange;
-
-  /**
-   *  Amqp url, default 'amqp://localhost'
-   */
-  url?: string;
-
-  /**
-   *  Socket options for amqp connec
-   */
-  socketOptions?: any;
-
   backendType?: BackendType;
 
+  /**
+   *  Backend options
+   */
   backendOptions?: MongodbBackendOptions;
 
   /**
@@ -97,266 +79,82 @@ export interface ConsumerConfig {
   globalConcurrency?: number;
 }
 
-interface TaskRegister {
-  taskMeta: TaskMeta;
-  processFunc: ProcessFunc;
-  queueName: string;
-  consumerTag?: string;
-  channel?: amqp.Channel;
-}
-
-interface TaskRegisterMap {
-  [taskName: string]: TaskRegister;
-}
-
 export class Consumer extends EventEmitter {
-  protected connection: amqp.Connection;
-  private isConnecting: boolean = false;
-
-  private config: ConsumerConfig;
-  private checkJob: NodeJS.Timer;
-
-  private taskRegisterMap: TaskRegisterMap = {};
-  private waitQueue: TaskRegister[] = [];
+  private options: ConsumerOptions;
 
   private backend: Backend;
+  private broker: Broker;
 
-  public constructor(config: ConsumerConfig = {}) {
+  public constructor(config: ConsumerOptions = {}) {
     super();
 
-    const defaultConfig: ConsumerConfig = {
+    const defaultOptions: ConsumerOptions = {
       logger: {
         info: _.noop,
         error: _.noop,
       },
       processWrap: null,
-      queueSuffix: 'queue',
-      exchangeName: 'worker-exchange',
-      exchangeType: 'direct',
-      assertExchangeOptions: null,
-      url: 'amqp://localhost',
       globalConcurrency: 256,
       backendType: BackendType.MongoDB,
       backendOptions: null,
+      brokerType: BrokerType.AMQP,
+      brokerOptions: null,
     };
-    this.config = Object.assign({}, defaultConfig, config);
+    this.options = Object.assign({}, defaultOptions, config);
 
-    if (this.config.backendType === BackendType.MongoDB) {
-      this.backend = new MongodbBackend(this.config.backendOptions);
+    if (this.options.backendType === BackendType.MongoDB) {
+      this.backend = new MongodbBackend(this.options.backendOptions);
     }
 
-    this.checkJob = setInterval(this.checkConnection.bind(this), 500);
-  }
-
-  public async createConnection(): Promise<amqp.Connection> {
-    if (this.connection) return this.connection;
-    log('Begin create connection');
-
-    this.connection = await amqp.connect(this.config.url, this.config.socketOptions);
-    log('Got connection');
-
-    this.connection.on('error', (err) => {
-      this.emit('conn-error', err);
-      eventLog(`Connection error ${err} stack: ${err.stack}`);
-    });
-
-    this.connection.on('close', () => {
-      this.emit('conn-close');
-      eventLog('Connection close');
-      this.connection = null;
-    });
-
-    return this.connection;
-  }
-
-  private async createChannel(register: TaskRegister): Promise<amqp.Channel> {
-    if (register.channel) return register.channel;
-
-    const taskMeta = register.taskMeta;
-    const prefetchSize = taskMeta.concurrency || this.config.globalConcurrency;
-
-    log('Creating queue: %s, prefetch size: %d', register.queueName, prefetchSize);
-    const conn = await this.createConnection();
-
-    log('Begin create channel');
-    const channel = await conn.createChannel();
-
-    channel.on('error', (err) => {
-      this.emit('channel-error', err);
-      eventLog(`Channel error ${err} stack: ${err.stack}`);
-    });
-
-    channel.on('close', () => {
-      this.emit('channel-close');
-      eventLog('Channel close');
-      register.channel = null;
-    });
-
-    const options: amqp.Options.AssertQueue = {
-      durable: true,
-    };
-    if (taskMeta.maxPriority) {
-      options.maxPriority = taskMeta.maxPriority;
+    if (this.options.brokerType === BrokerType.AMQP) {
+      this.broker = new AMQPBroker(this.options.brokerOptions);
     }
 
-    await channel.assertExchange(
-      this.config.exchangeName,
-      this.config.exchangeType,
-      this.config.assertExchangeOptions,
-    );
-
-    await Promise
-      .all([
-        channel.assertQueue(register.queueName, options),
-        channel.bindQueue(register.queueName, this.config.exchangeName, taskMeta.name),
-        channel.prefetch(prefetchSize),
-      ]);
-
-    log('Got channel');
-    register.channel = channel;
-
-    this.emit('channel-created', channel);
-
-    return channel;
+    registerEvent(['error', 'ready', 'close'], this.broker, this);
+    registerEvent(['error', 'close'], this.backend, this);
   }
 
   public async checkHealth(): Promise<any> {
-    return Promise.map(_.values(this.taskRegisterMap), async (taskRegister) => {
-      if (taskRegister.channel && taskRegister.queueName) {
-        return taskRegister.channel.checkQueue(taskRegister.queueName);
-      }
-      return [];
+    return Promise.props({
+      backend: this.backend.checkHealth(),
+      broker: this.broker.checkHealth(),
     });
   }
 
-  private async getConnection(): Promise<amqp.Connection> {
-    if (this.connection) return this.connection;
-    if (this.isConnecting) return null;
-
-    this.isConnecting = true;
-    try {
-      await this.createConnection();
-      await this.drainQueue();
-    } catch (e) {
-      this.isConnecting = false;
-      this.emit('error', e);
-      return null;
-    }
-    this.isConnecting = false;
-    return this.connection;
-  }
-
-  private async drainQueue(): Promise<void> {
-    log('Queue size %d', this.waitQueue.length);
-    while (this.waitQueue.length) {
-      const taskRegister = this.waitQueue.pop();
-      await this.createChannelAndConsume(taskRegister);
-    }
-  }
-
-  private async createChannelAndConsume(taskRegister: TaskRegister): Promise<void> {
-    if (!this.connection) {
-      this.waitQueue.push(taskRegister);
-      return;
-    }
-    log('Create channel and consume %s', taskRegister.taskMeta.name);
-    try {
-      await this.createChannel(taskRegister);
-      await this.consume(taskRegister);
-      eventLog('Emit ready %s', taskRegister.taskMeta.name);
-      this.emit('ready', taskRegister.taskMeta.name);
-    } catch (e) {
-      this.emit('error', e);
-      return;
-    }
-  }
-
-  private async checkConnection(): Promise<void> {
-    await Promise.map(_.values(this.taskRegisterMap), async (taskRegister) => {
-      if (taskRegister.channel) return;
-      return this.createChannelAndConsume(taskRegister);
-    });
-
-    if (!this.connection) {
-      await this.getConnection();
-    }
-  }
-
-  private async taskRetry(taskRegister: TaskRegister, task: Task): Promise<number> {
-    if (task.retryCount >= task.maxRetry) {
-      return Promise.resolve(0);
-    }
-    const delayMs = getRetryDelayMs(task);
-
-    // Increase retry count
-    task.retryCount += 1;
-
-    const delayQueue = getDelayQueue(delayMs, this.config.exchangeName, task.name);
-    const queueDaclareOptions = getDelayQueueOptions(delayMs, this.config.exchangeName, task.name);
-
-    await taskRegister.channel.assertQueue(delayQueue, queueDaclareOptions);
-    await taskRegister.channel.sendToQueue(delayQueue, new Buffer(JSON.stringify(task)), {
-      persistent: true,
-    });
-    return task.maxRetry - task.retryCount;
-  }
-
-  private logSuccess(msg: amqp.Message, startTime: number, result: object): void {
-    this.config.logger.info({
-      taskName: msg.fields.routingKey,
-      data: msg.content.toString(),
+  private logSuccess(task: Task, startTime: number, result: object): void {
+    this.options.logger.info({
+      task,
       duration: Date.now() - startTime,
       result: JSON.stringify(result),
-      amqp: {
-        fields: msg.fields,
-        properties: msg.properties,
-      },
     });
   }
 
-  private logFail(msg: amqp.Message, startTime: number, e: Error): void {
-    this.config.logger.error({
-      taskName: msg.fields.routingKey,
-      data: msg.content.toString(),
+  private logFail(task: Task, startTime: number, e: Error): void {
+    this.options.logger.error({
+      task,
       duration: Date.now() - startTime,
       error: e,
       errorStacks: e.stack && e.stack.split('\n'),
-      amqp: {
-        fields: msg.fields,
-        properties: msg.properties,
-      },
     });
   }
 
-  private async consume(taskRegister: TaskRegister): Promise<any> {
-    const channel = taskRegister.channel;
+  public async registerTask(taskMeta: TaskMeta, processFunc: ProcessFunc): Promise<void> {
     const that = this;
 
-    let processFunc = taskRegister.processFunc;
-    if (this.config.processWrap) {
-      processFunc = this.config.processWrap(taskRegister.taskMeta.name, processFunc);
+    taskMeta.concurrency = taskMeta.concurrency || this.options.globalConcurrency;
+
+    if (this.options.processWrap) {
+      processFunc = this.options.processWrap(taskMeta.name, processFunc);
     }
 
-    log('Begin to consume');
-    async function processFuncWrap(msg) {
-      if (msg === null) return;
+    async function processFuncWrap(body: any, task: Task) {
+      await that.backend.setTaskStateReceived(task);
 
       const startTime = Date.now();
 
-      let task: Task;
-      try {
-        task = JSON.parse(msg.content.toString());
-      } catch (e) {
-        that.logFail(msg, startTime, e);
-        channel.ack(msg);
-        return;
-      }
-
-      await that.backend.setTaskStateReceived(task);
-
-      if (that.config.preProcess) {
-        that.config.preProcess.bind(this);
-        that.config.preProcess(task);
+      if (that.options.preProcess) {
+        that.options.preProcess.bind(this);
+        that.options.preProcess(task);
       }
 
       try {
@@ -364,74 +162,38 @@ export class Consumer extends EventEmitter {
         const result = await processFunc(task.body, task);
         await that.backend.setTaskStateSucceed(task, result);
 
-        if (that.config.postProcess) {
-          that.config.postProcess.bind(this);
-          that.config.postProcess(task, TaskState.SUCCEED, result);
+        if (that.options.postProcess) {
+          that.options.postProcess.bind(this);
+          that.options.postProcess(task, TaskState.SUCCEED, result);
         }
 
-        that.logSuccess(msg, startTime, result);
-
-        channel.ack(msg);
+        that.logSuccess(task, startTime, result);
       } catch (e) {
-
-        if (!e.noRetry) {
-          e.retryLeft = await that.taskRetry(taskRegister, task);
-          e.state = TaskState.FAILED;
-
-          if (e.retryLeft === 0) {
-            e.state = TaskState.FAILED;
-            await that.backend.setTaskStateFailed(task, e);
-          } else {
-            await that.backend.setTaskStateRetrying(task, e);
-          }
-        } else {
+        if (!e.noRetry || task.retryCount === task.maxRetry) {
           e.state = TaskState.FAILED;
           await that.backend.setTaskStateFailed(task, e);
+        } else {
+          e.state = TaskState.RETRYING;
+          await that.backend.setTaskStateRetrying(task, e);
         }
 
-        if (that.config.postProcess) {
-          that.config.postProcess.bind(this);
-          that.config.postProcess(task, e.state, e);
+        if (that.options.postProcess) {
+          that.options.postProcess.bind(this);
+          that.options.postProcess(task, e.state, e);
         }
 
-        that.logFail(msg, startTime, e);
-
-        channel.ack(msg);
+        that.logFail(task, startTime, e);
+        throw e;
       }
     }
 
-    const { consumerTag } = await channel.consume(taskRegister.queueName, processFuncWrap, {
-      noAck: false,
+    await this.broker.registerTask(taskMeta, processFuncWrap);
+  }
+
+  public async close(): Promise<any> {
+    return Promise.props({
+      broker: this.broker.close(),
+      backend: this.backend.close(),
     });
-
-    taskRegister.consumerTag = consumerTag;
-  }
-
-  public async registerTask(taskMeta: TaskMeta, processFunc: ProcessFunc): Promise<void> {
-    const taskRegister = <TaskRegister>{
-      taskMeta,
-      processFunc,
-      queueName: `${taskMeta.name}_${this.config.queueSuffix}`,
-    };
-    this.taskRegisterMap[taskMeta.name] = taskRegister;
-
-    await this.getConnection();
-
-    await this.createChannelAndConsume(taskRegister);
-  }
-
-  public async closeChannel(taskName: string): Promise<void> {
-    const register = this.taskRegisterMap[taskName];
-    /* istanbul ignore else */
-    if (register && register.channel) {
-      await register.channel.close();
-    }
-  }
-
-  public async closeConnection(): Promise<void> {
-    /* istanbul ignore else */
-    if (this.connection) {
-      await this.connection.close();
-    }
   }
 }

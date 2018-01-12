@@ -6,7 +6,7 @@ import {
   Producer,
   Consumer,
   Task,
-  ConsumerConfig,
+  ConsumerOptions,
   TaskState,
   ProcessFunc,
   TaskMeta,
@@ -22,7 +22,7 @@ test('#task preProcess', async (t) => {
   t.plan(2);
   const { promise, doneOne } = waitUtilDone(1);
 
-  const consumer = new Consumer(<ConsumerConfig>{
+  const consumer = new Consumer(<ConsumerOptions>{
     preProcess(task: Task): void {
       t.true(true);
     },
@@ -51,7 +51,7 @@ test('#task postProcess: success', async (t) => {
   t.plan(3);
   const { promise, doneOne } = waitUtilDone(1);
 
-  const consumer = new Consumer(<ConsumerConfig>{
+  const consumer = new Consumer(<ConsumerOptions>{
     postProcess(task: Task, state: TaskState, errorOrResult: any): void {
       t.is(state, TaskState.SUCCEED);
       t.is(errorOrResult, 'test');
@@ -82,7 +82,7 @@ test('#task postProcess: fail', async (t) => {
   t.plan(3);
   const { promise, doneOne } = waitUtilDone(1);
 
-  const consumer = new Consumer(<ConsumerConfig>{
+  const consumer = new Consumer(<ConsumerOptions>{
     postProcess(task: Task, state: TaskState, errorOrResult: any): void {
       t.is(state, TaskState.FAILED);
       t.is(errorOrResult.message, 'test');
@@ -117,7 +117,7 @@ test('#task hook for prom client', async (t) => {
     labelNames: ['state', 'taskName'],
   });
 
-  const consumer = new Consumer(<ConsumerConfig>{
+  const consumer = new Consumer(<ConsumerOptions>{
     preProcess(task: Task) {
       this.endTimer = summary.startTimer({ taskName: task.name });
     },
@@ -153,7 +153,7 @@ test('#task apm wrap', async (t) => {
   const taskName = 'hook-test-4';
   t.plan(1);
 
-  const consumer = new Consumer(<ConsumerConfig>{
+  const consumer = new Consumer(<ConsumerOptions>{
     processWrap(taskName: string, func: ProcessFunc): ProcessFunc {
       return func;
     },
