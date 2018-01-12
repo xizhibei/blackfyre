@@ -12,6 +12,7 @@ cache:
 
 services:
    - rabbitmq
+   - mongodb
 
 script:
   - npm run lint
