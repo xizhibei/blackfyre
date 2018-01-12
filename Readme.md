@@ -22,15 +22,15 @@ npm install blackfyre
 - Real time operation
 - Delayed job
 - Priority job
+- Backend store
 - Task retry with different strategies
 - Process function with pre & post hook
 - APM wrap function for easy
 
 ## TODO
 
-- Backend store
-- Rate limit
-- Event handler & emiter
+- Redis backend store & broker
+- More tests
 
 ## Overview
 
@@ -56,7 +56,7 @@ await (new Producer())
 ```ts
 import * as newrelic from 'newrelic';
 
-const consumer = new Consumer(<ConsumerConfig>{
+const consumer = new Consumer(<ConsumerOptions>{
     processWrap(taskName: string, func: ProcessFunc): ProcessFunc {
         return newrelic.startBackgroundTransaction(taskName, async (data: any, task: Task) => {
             try {
@@ -80,7 +80,7 @@ const summary = new promClient.Summary({
     labelNames: ['state', 'taskName'],
 });
 
-const consumer = new Consumer(<ConsumerConfig>{
+const consumer = new Consumer(<ConsumerOptions>{
     preProcess(task: Task) {
       // Yes, `this` binded to the process warp function,
       // so you may share some vars with the `postPostprocess`
@@ -95,7 +95,7 @@ const consumer = new Consumer(<ConsumerConfig>{
 ### Testing
 
 ```ts
-  const producer = new Producer(<ProducerConfig>{
+  const producer = new Producer(<ProducerOptions>{
     isTestMode: true,
   });
 
