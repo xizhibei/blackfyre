@@ -36,11 +36,13 @@ test('#task preProcess', async (t) => {
     doneOne();
   });
 
-  await (new Producer())
-    .createTask(<Task>{
-      name: taskName,
-      body: { test: 'test' }
-    });
+  consumer.on('ready', async () => {
+    await (new Producer())
+      .createTask(<Task>{
+        name: taskName,
+        body: { test: 'test' }
+      });
+  });
 
   await promise;
 });
@@ -67,11 +69,13 @@ test('#task postProcess: success', async (t) => {
     return 'test';
   });
 
-  await (new Producer())
-    .createTask(<Task>{
-      name: taskName,
-      body: { test: 'test' }
-    });
+  consumer.on('ready', async () => {
+    await (new Producer())
+      .createTask(<Task>{
+        name: taskName,
+        body: { test: 'test' }
+      });
+  });
 
   await promise;
 });
@@ -98,11 +102,13 @@ test('#task postProcess: fail', async (t) => {
     throw new Error('test');
   });
 
-  await (new Producer())
-    .createTask(<Task>{
-      name: taskName,
-      body: { test: 'test' }
-    });
+  consumer.on('ready', async () => {
+    await (new Producer())
+      .createTask(<Task>{
+        name: taskName,
+        body: { test: 'test' }
+      });
+  });
 
   await promise;
 });
@@ -135,11 +141,13 @@ test('#task hook for prom client', async (t) => {
     doneOne();
   });
 
-  await (new Producer())
-    .createTask(<Task>{
-      name: taskName,
-      body: { test: 'test' }
-    });
+  consumer.on('ready', async () => {
+    await (new Producer())
+      .createTask(<Task>{
+        name: taskName,
+        body: { test: 'test' }
+      });
+  });
 
   await promise;
 
@@ -169,11 +177,13 @@ test('#task apm wrap', async (t) => {
     doneOne();
   });
 
-  await (new Producer())
-    .createTask(<Task>{
-      name: taskName,
-      body: { test: 'test' }
-    });
+  consumer.on('ready', async () => {
+    await (new Producer())
+      .createTask(<Task>{
+        name: taskName,
+        body: { test: 'test' }
+      });
+  });
 
   await promise;
 });

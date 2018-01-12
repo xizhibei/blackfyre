@@ -12,7 +12,7 @@ async function testRetry(t, retryStrategy: RetryStrategy) {
 
   const maxRetry = 5;
   t.plan(maxRetry + 1);
-  const {promise, doneOne} = waitUtilDone(maxRetry + 1);
+  const { promise, doneOne } = waitUtilDone(maxRetry + 1);
 
   const consumer = new Consumer();
 
@@ -25,14 +25,16 @@ async function testRetry(t, retryStrategy: RetryStrategy) {
     throw new Error('test');
   });
 
-  await (new Producer())
-    .createTask(<Task>{
-      name: taskName,
-      body: { test: 'test' },
-      initDelayMs: 50,
-      maxRetry,
-      retryStrategy,
-    });
+  consumer.on('ready', async () => {
+    await (new Producer())
+      .createTask(<Task>{
+        name: taskName,
+        body: { test: 'test' },
+        initDelayMs: 50,
+        maxRetry,
+        retryStrategy,
+      });
+  });
 
   await promise;
 }
@@ -58,7 +60,7 @@ test('#retry task abort', async t => {
 
   const maxRetry = 5;
   t.plan(1);
-  const {promise, doneOne} = waitUtilDone(1);
+  const { promise, doneOne } = waitUtilDone(1);
 
   const consumer = new Consumer();
 
@@ -71,13 +73,15 @@ test('#retry task abort', async t => {
     throw new CustomError('test');
   });
 
-  await (new Producer())
-    .createTask(<Task>{
-      name: taskName,
-      body: { test: 'test' },
-      initDelayMs: 50,
-      maxRetry,
-    });
+  consumer.on('ready', async () => {
+    await (new Producer())
+      .createTask(<Task>{
+        name: taskName,
+        body: { test: 'test' },
+        initDelayMs: 50,
+        maxRetry,
+      });
+  });
 
   await promise;
 });

@@ -47,18 +47,20 @@ test('#worker wait producer to be ready', async (t) => {
     doneOne();
   });
 
-  const producer = await new Producer();
+  consumer.on('ready', async () => {
+    const producer = await new Producer();
 
-  producer.on('ready', () => {
+    producer.on('ready', () => {
+      producer.createTask(<Task>{
+        name: taskName,
+        body: { test: 'test' }
+      });
+    });
+
     producer.createTask(<Task>{
       name: taskName,
       body: { test: 'test' }
     });
-  });
-
-  producer.createTask(<Task>{
-    name: taskName,
-    body: { test: 'test' }
   });
 
   await promise;
@@ -103,11 +105,13 @@ test('#normal task', async (t) => {
     doneOne();
   });
 
-  await (new Producer())
-    .createTask(<Task>{
-      name: taskName,
-      body: { test: 'test' }
-    });
+  consumer.on('ready', async () => {
+    await (new Producer())
+      .createTask(<Task>{
+        name: taskName,
+        body: { test: 'test' }
+      });
+  });
 
   await promise;
 });
@@ -128,12 +132,14 @@ test('#priority task', async (t) => {
     doneOne();
   });
 
-  await (new Producer())
-    .createTask(<Task>{
-      name: taskName,
-      body: { test: 'test' },
-      priority: 10,
-    });
+  consumer.on('ready', async () => {
+    await (new Producer())
+      .createTask(<Task>{
+        name: taskName,
+        body: { test: 'test' },
+        priority: 10,
+      });
+  });
 
   await promise;
 });
@@ -153,12 +159,14 @@ test('#delay task', async t => {
     doneOne();
   });
 
-  await (new Producer())
-    .createTask(<Task>{
-      name: taskName,
-      body: { test: 'test' },
-      eta: Date.now() + 500,
-    });
+  consumer.on('ready', async () => {
+    await (new Producer())
+      .createTask(<Task>{
+        name: taskName,
+        body: { test: 'test' },
+        eta: Date.now() + 500,
+      });
+  });
 
   await promise;
 });
