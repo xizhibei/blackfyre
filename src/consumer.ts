@@ -104,14 +104,14 @@ export class Consumer extends EventEmitter {
 
     if (this.options.backendType === BackendType.MongoDB) {
       this.backend = new MongodbBackend(this.options.backendOptions);
+      registerEvent(['error', 'close'], this.backend, this);
     }
 
     if (this.options.brokerType === BrokerType.AMQP) {
       this.broker = new AMQPBroker(this.options.brokerOptions);
+      registerEvent(['error', 'ready', 'close'], this.broker, this);
     }
 
-    registerEvent(['error', 'ready', 'close'], this.broker, this);
-    registerEvent(['error', 'close'], this.backend, this);
   }
 
   private logSuccess(task: Task, startTime: number, result: object): void {
@@ -141,7 +141,7 @@ export class Consumer extends EventEmitter {
     }
 
     async function processFuncWrap(body: any, task: Task) {
-      await that.backend.setTaskStateReceived(task);
+      await that.backend && that.backend.setTaskStateReceived(task);
 
       const startTime = Date.now();
 
@@ -151,9 +151,9 @@ export class Consumer extends EventEmitter {
       }
 
       try {
-        await that.backend.setTaskStateStarted(task);
+        await that.backend && that.backend.setTaskStateStarted(task);
         const result = await processFunc(task.body, task);
-        await that.backend.setTaskStateSucceed(task, result);
+        await that.backend && that.backend.setTaskStateSucceed(task, result);
 
         if (that.options.postProcess) {
           that.options.postProcess.bind(this);
@@ -164,10 +164,10 @@ export class Consumer extends EventEmitter {
       } catch (e) {
         if (!e.noRetry || task.retryCount === task.maxRetry) {
           e.state = TaskState.FAILED;
-          await that.backend.setTaskStateFailed(task, e);
+          await that.backend && that.backend.setTaskStateFailed(task, e);
         } else {
           e.state = TaskState.RETRYING;
-          await that.backend.setTaskStateRetrying(task, e);
+          await that.backend && that.backend.setTaskStateRetrying(task, e);
         }
 
         if (that.options.postProcess) {
@@ -186,13 +186,13 @@ export class Consumer extends EventEmitter {
   public async close(): Promise<any> {
     return Promise.props({
       broker: this.broker.close(),
-      backend: this.backend.close(),
+      backend: this.backend && this.backend.close(),
     });
   }
 
   public async checkHealth(): Promise<any> {
     return Promise.props({
-      backend: this.backend.checkHealth(),
+      backend: this.backend && this.backend.checkHealth(),
       broker: this.broker.checkHealth(),
     });
   }

@@ -86,18 +86,18 @@ export class Producer extends EventEmitter {
 
     if (this.options.backendType === BackendType.MongoDB) {
       this.backend = new MongodbBackend(this.options.backendOptions);
+      registerEvent(['error', 'close'], this.backend, this);
     }
 
     if (this.options.brokerType === BrokerType.AMQP) {
       this.broker = new AMQPBroker(this.options.brokerOptions);
+      registerEvent(['error', 'ready', 'close'], this.broker, this);
     }
 
-    registerEvent(['error', 'ready', 'close'], this.broker, this);
-    registerEvent(['error', 'close'], this.backend, this);
   }
 
   public async createTask(task: Task): Promise<any> {
-    task.id = uuid.v4();
+    task.id = task.id || uuid.v4();
     task.retryCount = 0;
 
     task.maxRetry = task.maxRetry || this.options.globalMaxRetry;
@@ -109,19 +109,21 @@ export class Producer extends EventEmitter {
       return;
     }
 
+    await this.backend && this.backend.setTaskStatePending(task);
+
     return this.broker.publish(task);
   }
 
   public async close(): Promise<any> {
     return Promise.props({
       broker: this.broker.close(),
-      backend: this.backend.close(),
+      backend: this.backend && this.backend.close(),
     });
   }
 
   public async checkHealth(): Promise<any> {
     return Promise.props({
-      backend: this.backend.checkHealth(),
+      backend: this.backend && this.backend.checkHealth(),
       broker: this.broker.checkHealth(),
     });
   }

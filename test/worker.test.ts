@@ -2,8 +2,10 @@ import test from 'ava';
 
 import * as Bluebird from 'bluebird';
 import * as _ from 'lodash';
-import { Producer, Consumer, Task, TaskMeta } from '../src/index';
+import { Producer, Consumer, Task, TaskMeta, ProducerOptions } from '../src/index';
 import { waitUtilDone } from './utils';
+import { ConsumerOptions } from '../src/consumer';
+import { BackendType } from '../src/backends/interface';
 
 Promise = Bluebird as any;
 
@@ -127,6 +129,37 @@ test('#normal task', async (t) => {
 
   consumer.on('ready', async () => {
     await (new Producer())
+      .createTask(<Task>{
+        name: taskName,
+        body: { test: 'test' }
+      });
+  });
+
+  await promise;
+});
+
+test('#normal task with none backend', async (t) => {
+  const taskName = 'test-none-backend';
+
+  t.plan(1);
+  const { promise, doneOne } = waitUtilDone(1);
+
+  const consumer = new Consumer(<ConsumerOptions>{
+    backendType: BackendType.None,
+  });
+
+  consumer.registerTask(<TaskMeta>{
+    name: taskName,
+    concurrency: 20,
+  }, async (data) => {
+    t.is(data.test, 'test');
+    doneOne();
+  });
+
+  consumer.on('ready', async () => {
+    await (new Producer(<ProducerOptions>{
+      backendType: BackendType.None,
+    }))
       .createTask(<Task>{
         name: taskName,
         body: { test: 'test' }

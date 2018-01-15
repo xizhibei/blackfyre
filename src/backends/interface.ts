@@ -27,4 +27,5 @@ export abstract class Backend extends EventEmitter {
 
 export enum BackendType {
   MongoDB = 'mongodb',
+  None = 'none',
 }
