@@ -18,7 +18,34 @@ export interface TaskMeta {
   maxPriority?: number;
 }
 
-export interface Task {
+/**
+ * The task retry options
+ * Algorithm: initDelayMs + delayMs x retryStrategy(retryCount)
+ */
+export interface RetryOptions {
+
+  /**
+   *  Max retry for task failure, default is 0, means no retry
+   */
+  maxRetry?: number;
+
+  /**
+   *  Init delay for retry, in millonseconds
+   */
+  initDelayMs?: number;
+
+  /**
+   *  Delay factor for retry, in millonseconds
+   */
+  delayMs?: number;
+
+  /**
+   *  Retry stragegy, the default is FIBONACCI
+   */
+  retryStrategy?: RetryStrategy;
+}
+
+export interface Task extends RetryOptions {
   /**
    * Task id, default: `uuid.v4()`
    */
@@ -40,28 +67,14 @@ export interface Task {
   eta?: number;
 
   /**
-   *  Retry count, just for internal use
-   */
-  retryCount?: number;
-  /**
-   *  Max retry for task failure, default is 0, means no retry
-   */
-  maxRetry?: number;
-
-  /**
-   *  Init delay for retry, in millonseconds
-   */
-  initDelayMs?: number;
-
-  /**
    *  Task priority for the priority queue
    */
   priority?: number;
 
   /**
-   *  Retry stragegy, the default is FIBONACCI
+   *  Retry count, just for internal use
    */
-  retryStrategy?: RetryStrategy;
+  retryCount?: number;
 }
 
 export enum RetryStrategy {

@@ -36,24 +36,25 @@ export function getDelayQueueOptions(delayMs: number, exchange: string, routingK
 }
 
 const strategies = {
-  [RetryStrategy.FIBONACCI]: (task: Task) => {
-    return task.initDelayMs * fibonacci(task.retryCount);
+  [RetryStrategy.FIBONACCI]: (retryCount: number) => {
+    return fibonacci(retryCount);
   },
-  [RetryStrategy.EXPONENTIAL]: (task: Task) => {
-    return task.initDelayMs * Math.pow(2, task.retryCount);
+  [RetryStrategy.EXPONENTIAL]: (retryCount: number) => {
+    return Math.pow(2, retryCount);
   },
-  [RetryStrategy.LINEAR]: (task: Task) => {
-    return task.initDelayMs * (task.retryCount + 1);
+  [RetryStrategy.LINEAR]: (retryCount: number) => {
+    return retryCount + 1;
   },
 };
 
 export function getRetryDelayMs(task: Task): number {
   let strategy = strategies[task.retryStrategy];
+  /* istanbul ignore if */
   if (!strategy) {
     // Fallback to FIBONACCI
     strategy = strategies[RetryStrategy.FIBONACCI];
   }
-  return strategy(task);
+  return task.initDelayMs + task.delayMs * strategy(task.retryCount);
 }
 
 export function registerEvent(events, source, target) {

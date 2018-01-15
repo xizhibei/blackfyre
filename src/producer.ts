@@ -6,7 +6,7 @@ import * as debug from 'debug';
 import * as uuid from 'uuid';
 import * as Bluebird from 'bluebird';
 
-import { Task, RetryStrategy } from './common';
+import { Task, RetryStrategy, RetryOptions } from './common';
 
 import { BackendType, Backend } from './backends/interface';
 import { MongodbBackend, MongodbBackendOptions } from './backends/mongodb';
@@ -46,19 +46,14 @@ export interface ProducerOptions {
   backendOptions?: MongodbBackendOptions;
 
   /**
-   * Global max retry for task, will be override by task metadata, default: 0
+   * Global retry options
+   * Default:
+   *     maxRetry: 0
+   *     initDelayMs: 100
+   *     delayMs: 100
+   *     retryStrategy: FIBONACCI
    */
-  globalMaxRetry?: number;
-
-  /**
-   * Global init delay for task, will be override by task metadata, default: 100
-   */
-  globalInitDelayMs?: number;
-
-  /**
-   * Global retry strategy for task, will be override by task metadata, default: FIBONACCI
-   */
-  globalretryStrategy?: RetryStrategy;
+  globalRetryOptions?: RetryOptions;
 }
 
 export class Producer extends EventEmitter {
@@ -72,17 +67,20 @@ export class Producer extends EventEmitter {
   constructor(options: ProducerOptions = {}) {
     super();
 
-    const defaultConfig: ProducerOptions = {
+    this.options = Object.assign(<ProducerOptions>{
       isTestMode: false,
-      globalMaxRetry: 0,
-      globalInitDelayMs: 100,
-      globalretryStrategy: RetryStrategy.FIBONACCI,
       backendType: BackendType.MongoDB,
       backendOptions: null,
       brokerType: BrokerType.AMQP,
       brokerOptions: null,
-    };
-    this.options = Object.assign({}, defaultConfig, options);
+    }, options);
+
+    this.options.globalRetryOptions = Object.assign(<RetryOptions>{
+      maxRetry: 0,
+      initDelayMs: 100,
+      delayMs: 100,
+      retryStrategy: RetryStrategy.FIBONACCI,
+    }, options.globalRetryOptions);
 
     if (this.options.backendType === BackendType.MongoDB) {
       this.backend = new MongodbBackend(this.options.backendOptions);
@@ -100,9 +98,7 @@ export class Producer extends EventEmitter {
     task.id = task.id || uuid.v4();
     task.retryCount = 0;
 
-    task.maxRetry = task.maxRetry || this.options.globalMaxRetry;
-    task.initDelayMs = task.initDelayMs || this.options.globalInitDelayMs;
-    task.retryStrategy = task.retryStrategy || this.options.globalretryStrategy;
+    task = Object.assign({}, this.options.globalRetryOptions, task);
 
     if (this.options.isTestMode) {
       this.createdTasks.push(task);
