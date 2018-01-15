@@ -15,7 +15,6 @@ import { AMQPBrokerOptions, AMQPBroker } from './brokers/amqp';
 import { registerEvent } from './helper';
 
 const log = debug('blackfyre:producer');
-const eventLog = debug('blackfyre:producer:event');
 
 Promise = Bluebird as any;
 
@@ -82,11 +81,13 @@ export class Producer extends EventEmitter {
       retryStrategy: RetryStrategy.FIBONACCI,
     }, options.globalRetryOptions);
 
+    log('Init backend %s', this.options.backendType);
     if (this.options.backendType === BackendType.MongoDB) {
       this.backend = new MongodbBackend(this.options.backendOptions);
       registerEvent(['error', 'close'], this.backend, this);
     }
 
+    log('Init broker %s', this.options.brokerType);
     if (this.options.brokerType === BrokerType.AMQP) {
       this.broker = new AMQPBroker(this.options.brokerOptions);
       registerEvent(['error', 'ready', 'close'], this.broker, this);

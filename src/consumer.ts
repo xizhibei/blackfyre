@@ -21,7 +21,6 @@ import { registerEvent } from './helper';
 Promise = Bluebird as any;
 
 const log = debug('blackfyre:consumer');
-const eventLog = debug('blackfyre:consumer:event');
 
 export interface Logger {
   info: (obj: object) => void;
@@ -102,11 +101,13 @@ export class Consumer extends EventEmitter {
     };
     this.options = Object.assign({}, defaultOptions, config);
 
+    log('Init backend %s', this.options.backendType);
     if (this.options.backendType === BackendType.MongoDB) {
       this.backend = new MongodbBackend(this.options.backendOptions);
       registerEvent(['error', 'close'], this.backend, this);
     }
 
+    log('Init broker %s', this.options.brokerType);
     if (this.options.brokerType === BrokerType.AMQP) {
       this.broker = new AMQPBroker(this.options.brokerOptions);
       registerEvent(['error', 'ready', 'close'], this.broker, this);
@@ -132,6 +133,8 @@ export class Consumer extends EventEmitter {
   }
 
   public async registerTask(taskMeta: TaskMeta, processFunc: ProcessFunc): Promise<void> {
+    log('Register task %s', taskMeta.name);
+
     const that = this;
 
     taskMeta.concurrency = taskMeta.concurrency || this.options.globalConcurrency;
