@@ -19,8 +19,8 @@ import { AMQPBrokerOptions } from '../src/brokers/amqp';
 
 Promise = Bluebird as any;
 
-test('#events producer close', async (t) => {
-  const taskName = 'event-test-producer';
+test.skip('#events producer close', async (t) => {
+  const taskName = 'event-test-producer-close';
 
   const producer = new Producer();
 
@@ -31,17 +31,9 @@ test('#events producer close', async (t) => {
     doneOne();
   });
 
-  producer.on('error', () => {
-
-  });
-
   producer.on('ready', async () => {
     await Promise.delay(100);
-    try {
-      await producer.close();
-    } catch (e) {
-
-    }
+    await producer.close();
     t.true(true);
     doneOne();
   });
@@ -56,7 +48,7 @@ test('#events producer close', async (t) => {
 });
 
 test('#events producer channel error', async (t) => {
-  const taskName = 'event-test-producer';
+  const taskName = 'event-test-producer-error';
 
   const producerDefault = new Producer(<ConsumerOptions>{
     brokerOptions: <AMQPBrokerOptions>{
@@ -93,7 +85,7 @@ test('#events producer channel error', async (t) => {
 });
 
 test('#events consumer close', async (t) => {
-  const taskName = 'event-test-consumer';
+  const taskName = 'event-test-consumer-close';
 
   const consumer = new Consumer();
 
@@ -106,11 +98,7 @@ test('#events consumer close', async (t) => {
 
   consumer.on('ready', async () => {
     await Promise.delay(100);
-    try {
-      await consumer.close();
-    } catch (e) {
-
-    }
+    await consumer.close();
     t.true(true);
     doneOne();
   });
@@ -125,7 +113,7 @@ test('#events consumer close', async (t) => {
 });
 
 test('#events consumer channel error', async (t) => {
-  const taskName = 'event-test-consumer';
+  const taskName = 'event-test-consumer-error';
 
   const consumerDefault = new Consumer(<ConsumerOptions>{
     brokerOptions: <AMQPBrokerOptions>{
