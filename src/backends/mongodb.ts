@@ -6,10 +6,29 @@ import { Backend, TaskStore } from './interface';
 import { registerEvent } from '../helper';
 
 export interface MongodbBackendOptions {
+  /**
+   * MongoDB connection url
+   */
   url?: string;
+
+  /**
+   * DB name, default : blackfyre
+   */
   dbName?: string;
+
+  /**
+   * Collection name, default: tasks
+   */
   collectionName?: string;
+
+  /**
+   * MongoClient connect options, see: https://mongodb.github.io/node-mongodb-native/3.0/api
+   */
   mongoClientOptions?: mongodb.MongoClientOptions;
+
+  /**
+   * Results expires in, seconds. default: 86400 (1 day)
+   */
   resultsExpireIn?: number;
 }
 

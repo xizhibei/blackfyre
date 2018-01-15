@@ -17,8 +17,8 @@ import {
 
 Promise = Bluebird as any;
 
-const log = debug('blackfyre:backend:amqp');
-const eventLog = debug('blackfyre:backend:amqp:event');
+const log = debug('blackfyre:broker:amqp');
+const eventLog = debug('blackfyre:broker:amqp:event');
 
 export interface AMQPBrokerOptions {
   /**
@@ -42,9 +42,14 @@ export interface AMQPBrokerOptions {
   exchangeType?: string;
 
   /**
-   *  Options for assert AssertExchange
+   *  Options for assert exchange
    */
-  assertExchangeOptions?: amqp.Options.AssertExchange;
+  exchangeOptions?: amqp.Options.AssertExchange;
+
+  /**
+   *  Options for assert queue (consumer)
+   */
+  queueOptions?: amqp.Options.AssertQueue;
 
   /**
    *  Socket options for amqp connec
@@ -80,8 +85,11 @@ export class AMQPBroker extends Broker {
       queueSuffix: 'queue',
       exchangeName: 'worker-exchange',
       exchangeType: 'direct',
-      assertExchangeOptions: null,
+      queueOptions: <amqp.Options.AssertQueue>{
+        durable: true,
+      },
       socketOptions: null,
+      exchangeOptions: null,
     }, options);
 
     this.getConnection();
@@ -142,7 +150,7 @@ export class AMQPBroker extends Broker {
     await channel.assertExchange(
       this.options.exchangeName,
       this.options.exchangeType,
-      this.options.assertExchangeOptions,
+      this.options.exchangeOptions,
     );
 
     this.producerChannel = channel;
@@ -175,22 +183,20 @@ export class AMQPBroker extends Broker {
       register.channel = null;
     });
 
-    const options: amqp.Options.AssertQueue = {
-      durable: true,
-    };
-    if (taskMeta.maxPriority) {
-      options.maxPriority = taskMeta.maxPriority;
-    }
-
     await channel.assertExchange(
       this.options.exchangeName,
       this.options.exchangeType,
-      this.options.assertExchangeOptions,
+      this.options.exchangeOptions,
     );
+
+    const queueOptions: amqp.Options.AssertQueue = _.clone(this.options.queueOptions);
+    if (taskMeta.maxPriority) {
+      queueOptions.maxPriority = taskMeta.maxPriority;
+    }
 
     await Promise
       .all([
-        channel.assertQueue(register.queueName, options),
+        channel.assertQueue(register.queueName, queueOptions),
         channel.bindQueue(register.queueName, this.options.exchangeName, taskMeta.name),
         channel.prefetch(prefetchSize),
       ]);
