@@ -19,13 +19,13 @@ import { AMQPBrokerOptions } from '../src/brokers/amqp';
 
 Promise = Bluebird as any;
 
-test.skip('#events producer close', async (t) => {
+test('#events producer close', async (t) => {
   const taskName = 'event-test-producer';
 
   const producer = new Producer();
 
-  t.plan(2);
-  const { promise, doneOne } = waitUtilDone(2);
+  t.plan(3);
+  const { promise, doneOne } = waitUtilDone(3);
   producer.on('close', () => {
     t.true(true);
     doneOne();
@@ -36,6 +36,7 @@ test.skip('#events producer close', async (t) => {
   });
 
   producer.on('ready', async () => {
+    await Promise.delay(100);
     try {
       await producer.close();
     } catch (e) {
@@ -91,7 +92,7 @@ test('#events producer channel error', async (t) => {
   await promise;
 });
 
-test.skip('#events consumer close', async (t) => {
+test('#events consumer close', async (t) => {
   const taskName = 'event-test-consumer';
 
   const consumer = new Consumer();
@@ -104,6 +105,7 @@ test.skip('#events consumer close', async (t) => {
   });
 
   consumer.on('ready', async () => {
+    await Promise.delay(100);
     try {
       await consumer.close();
     } catch (e) {

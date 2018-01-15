@@ -114,13 +114,6 @@ export class Consumer extends EventEmitter {
     registerEvent(['error', 'close'], this.backend, this);
   }
 
-  public async checkHealth(): Promise<any> {
-    return Promise.props({
-      backend: this.backend.checkHealth(),
-      broker: this.broker.checkHealth(),
-    });
-  }
-
   private logSuccess(task: Task, startTime: number, result: object): void {
     this.options.logger.info({
       task,
@@ -194,6 +187,13 @@ export class Consumer extends EventEmitter {
     return Promise.props({
       broker: this.broker.close(),
       backend: this.backend.close(),
+    });
+  }
+
+  public async checkHealth(): Promise<any> {
+    return Promise.props({
+      backend: this.backend.checkHealth(),
+      broker: this.broker.checkHealth(),
     });
   }
 }

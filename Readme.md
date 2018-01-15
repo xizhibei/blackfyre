@@ -25,7 +25,7 @@ npm install blackfyre
 - Backend store
 - Task retry with different strategies
 - Process function with pre & post hook
-- APM wrap function for easy
+- Wrap function for apm
 
 ## TODO
 

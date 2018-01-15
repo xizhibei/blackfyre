@@ -118,4 +118,11 @@ export class Producer extends EventEmitter {
       backend: this.backend.close(),
     });
   }
+
+  public async checkHealth(): Promise<any> {
+    return Promise.props({
+      backend: this.backend.checkHealth(),
+      broker: this.broker.checkHealth(),
+    });
+  }
 }

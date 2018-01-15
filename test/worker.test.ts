@@ -7,8 +7,8 @@ import { waitUtilDone } from './utils';
 
 Promise = Bluebird as any;
 
-test('#worker health check', async (t) => {
-  const taskName = 'test-health-check';
+test('#consumer health check', async (t) => {
+  const taskName = 'test-consumer-health-check';
   const consumer = new Consumer();
 
   consumer.registerTask(<TaskMeta>{
@@ -21,9 +21,10 @@ test('#worker health check', async (t) => {
   const { promise, doneOne } = waitUtilDone(1);
 
   consumer.on('ready', async () => {
+    await Promise.delay(100);
     const result = await consumer.checkHealth();
     const [r] = result.broker.consumer;
-    t.is(r.queue, 'test-health-check_queue');
+    t.is(r.queue, `${taskName}_queue`);
     t.is(r.consumerCount, 1);
     doneOne();
   });
@@ -31,11 +32,35 @@ test('#worker health check', async (t) => {
   await promise;
 });
 
-test('#worker wait producer to be ready', async (t) => {
-  const taskName = 'test-producer-ready';
+test('#producer health check', async (t) => {
+  const taskName = 'test-producer-health-check';
 
-  t.plan(2);
-  const { promise, doneOne } = waitUtilDone(2);
+  t.plan(1);
+  const { promise, doneOne } = waitUtilDone(1);
+
+  const producer = await new Producer();
+
+  producer.on('ready', async () => {
+    await Promise.delay(100);
+    const result = await producer.checkHealth();
+    t.is(_.size(result.broker.producer), 0);
+    doneOne();
+  });
+
+  await producer
+    .createTask(<Task>{
+      name: taskName,
+      body: { test: 'test' }
+    });
+
+  await promise;
+});
+
+test('#producer register race', async (t) => {
+  const taskName = 'test-producer-race';
+
+  t.plan(5);
+  const { promise, doneOne } = waitUtilDone(5);
 
   const consumer = new Consumer();
 
@@ -49,17 +74,12 @@ test('#worker wait producer to be ready', async (t) => {
 
   consumer.on('ready', async () => {
     const producer = await new Producer();
-
-    producer.on('ready', () => {
-      producer.createTask(<Task>{
-        name: taskName,
-        body: { test: 'test' }
-      });
-    });
-
-    producer.createTask(<Task>{
-      name: taskName,
-      body: { test: 'test' }
+    await Promise.map(_.times(5), async (i) => {
+      await producer
+        .createTask(<Task>{
+          name: taskName,
+          body: { test: 'test' }
+        });
     });
   });
 
@@ -67,7 +87,7 @@ test('#worker wait producer to be ready', async (t) => {
 });
 
 test('#consumer register race', async (t) => {
-  const taskName = 'test-producer-ready';
+  const taskName = 'test-producer-race';
 
   t.plan(5);
   const { promise, doneOne } = waitUtilDone(5);

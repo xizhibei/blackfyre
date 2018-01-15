@@ -114,6 +114,7 @@ export class AMQPBroker extends Broker {
   }
 
   private async getConnection(): Promise<amqp.Connection> {
+    /* istanbul ignore if */
     if (this.connection) return this.connection;
     if (this.isConnecting) return null;
 
@@ -130,6 +131,9 @@ export class AMQPBroker extends Broker {
   }
 
   private async createProducerChannel(): Promise<amqp.ConfirmChannel> {
+    /* istanbul ignore if */
+    if (this.producerChannel) return this.producerChannel;
+
     const conn = await this.createConnection();
 
     log('Created connection !!!');
@@ -161,6 +165,7 @@ export class AMQPBroker extends Broker {
   }
 
   private async createConsumerChannel(register: AMQPTaskRegister) {
+    /* istanbul ignore if */
     if (register.channel) return register.channel;
 
     const taskMeta = register.taskMeta;
@@ -210,6 +215,7 @@ export class AMQPBroker extends Broker {
   }
 
   private async getProducerChannel(): Promise<amqp.ConfirmChannel> {
+    /* istanbul ignore if */
     if (this.producerChannel) return this.producerChannel;
 
     if (this.isProducerChannelCreating) return null;
@@ -297,6 +303,7 @@ export class AMQPBroker extends Broker {
     const channel = taskRegister.channel;
     const that = this;
     async function processFuncWrap(msg) {
+      /* istanbul ignore if */
       if (msg === null) return;
 
       let task: Task;
@@ -411,6 +418,7 @@ export class AMQPBroker extends Broker {
   }
 
   public async close(): Promise<void> {
+    /* istanbul ignore if */
     if (this.connection) {
       await this.connection.close();
     }
