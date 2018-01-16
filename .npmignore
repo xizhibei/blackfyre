@@ -5,7 +5,7 @@ test/
 dist/test
 .vscode
 .editorconfig
-.eslintrc.yaml
+tslint.json
 *.tgz
 .nyc_output
 coverage
