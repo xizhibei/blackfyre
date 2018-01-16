@@ -58,7 +58,7 @@ test('#producer health check', async (t) => {
   await promise;
 });
 
-test('#producer register race', async (t) => {
+test('#producer race', async (t) => {
   const taskName = 'test-producer-race';
 
   t.plan(5);
@@ -88,7 +88,7 @@ test('#producer register race', async (t) => {
   await promise;
 });
 
-test('#consumer register race', async (t) => {
+test('#consumer race', async (t) => {
   const taskName = 'test-producer-race';
 
   t.plan(5);

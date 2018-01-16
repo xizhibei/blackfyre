@@ -19,13 +19,15 @@ import { AMQPBrokerOptions } from '../src/brokers/amqp';
 
 Promise = Bluebird as any;
 
-test.skip('#events producer close', async (t) => {
+test('#events producer close', async (t) => {
   const taskName = 'event-test-producer-close';
 
   const producer = new Producer();
 
-  t.plan(3);
-  const { promise, doneOne } = waitUtilDone(3);
+  t.plan(4);
+  const { promise, doneOne } = waitUtilDone(4);
+
+  // mongodb close, amqp close, channel close
   producer.on('close', () => {
     t.true(true);
     doneOne();
@@ -91,6 +93,8 @@ test('#events consumer close', async (t) => {
 
   t.plan(3);
   const { promise, doneOne } = waitUtilDone(2);
+
+  // amqp close, channel close, no task run so no mongo connected
   consumer.on('close', () => {
     t.true(true);
     doneOne();

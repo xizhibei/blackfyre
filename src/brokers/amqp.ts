@@ -91,8 +91,6 @@ export class AMQPBroker extends Broker {
       socketOptions: null,
       exchangeOptions: null,
     }, options);
-
-    this.getConnection();
   }
 
   private async createConnection(): Promise<amqp.Connection> {
@@ -115,12 +113,16 @@ export class AMQPBroker extends Broker {
 
   private async getConnection(): Promise<amqp.Connection> {
     /* istanbul ignore if */
-    if (this.connection) return this.connection;
+    if (this.connection) {
+      await this.drainQueue();
+      return this.connection;
+    }
     if (this.isConnecting) return null;
 
     this.isConnecting = true;
     try {
       await this.createConnection();
+      await this.drainQueue();
     } catch (e) {
       this.isConnecting = false;
       this.emit('error', e);
@@ -134,10 +136,8 @@ export class AMQPBroker extends Broker {
     /* istanbul ignore if */
     if (this.producerChannel) return this.producerChannel;
 
-    const conn = await this.createConnection();
-
     log('Created connection !!!');
-    const channel = await conn.createConfirmChannel();
+    const channel = await this.connection.createConfirmChannel();
 
     channel.on('error', (err) => {
       this.emit('error', err);
@@ -171,11 +171,8 @@ export class AMQPBroker extends Broker {
     const taskMeta = register.taskMeta;
     const prefetchSize = taskMeta.concurrency;
 
-    log('Creating queue: %s, prefetch size: %d', register.queueName, prefetchSize);
-    const conn = await this.createConnection();
-
     log('Begin create channel');
-    const channel = await conn.createChannel();
+    const channel = await this.connection.createChannel();
 
     channel.on('error', (err) => {
       this.emit('error', err);
@@ -223,12 +220,11 @@ export class AMQPBroker extends Broker {
 
     try {
       await this.createProducerChannel();
-      await this.drainQueue();
       eventLog('Producer ready');
       this.emit('ready');
     } catch (e) {
       this.isProducerChannelCreating = false;
-      this.emit('error', 'e');
+      this.emit('error', e);
       return;
     }
 
@@ -244,28 +240,26 @@ export class AMQPBroker extends Broker {
     }
 
     log('Task queue size %d', this.taskWaitQueue.length);
-    while (this.taskWaitQueue.length) {
-      const func = this.taskWaitQueue.pop();
-      await func();
+    if (this.taskWaitQueue.length) {
+      await this.getProducerChannel();
+      if (!this.producerChannel) return;
+      while(this.taskWaitQueue.length) {
+        const func = this.taskWaitQueue.pop();
+        await func();
+      }
     }
   }
 
   private async checkConsumerConnection(): Promise<void> {
     await Promise.map(_.values(this.taskRegisterMap), async (taskRegister) => {
       if (taskRegister.channel) return;
-      return this.createChannelAndConsume(taskRegister);
+      this.taskRegisterWaitQueue.push(taskRegister);
     });
 
-    if (!this.connection) {
-      await this.getConnection();
-    }
+    await this.getConnection();
   }
 
   private async createChannelAndConsume(taskRegister: AMQPTaskRegister): Promise<void> {
-    if (!this.connection) {
-      this.taskRegisterWaitQueue.push(taskRegister);
-      return;
-    }
     log('Create channel and consume %s', taskRegister.taskMeta.name);
     try {
       await this.createConsumerChannel(taskRegister);
@@ -337,23 +331,6 @@ export class AMQPBroker extends Broker {
     taskRegister.consumerTag = consumerTag;
   }
 
-  public async registerTask(taskMeta: TaskMeta, processFunc: ProcessFunc): Promise<void> {
-    const taskRegister = <TaskRegister>{
-      taskMeta,
-      processFunc,
-      queueName: `${taskMeta.name}_${this.options.queueSuffix}`,
-    };
-    this.taskRegisterMap[taskMeta.name] = taskRegister;
-
-    await this.getConnection();
-
-    await this.createChannelAndConsume(taskRegister);
-
-    if (!this.checkJob) {
-      this.checkJob = setInterval(this.checkConsumerConnection.bind(this), 500);
-    }
-  }
-
   private async send(task: Task): Promise<any> {
     const ch = this.producerChannel;
 
@@ -392,17 +369,34 @@ export class AMQPBroker extends Broker {
     });
   }
 
+  public async registerTask(taskMeta: TaskMeta, processFunc: ProcessFunc): Promise<void> {
+    const taskRegister = <TaskRegister>{
+      taskMeta,
+      processFunc,
+      queueName: `${taskMeta.name}_${this.options.queueSuffix}`,
+    };
+    this.taskRegisterMap[taskMeta.name] = taskRegister;
+
+    this.taskRegisterWaitQueue.push(taskRegister);
+
+    await this.getConnection();
+
+    if (!this.checkJob) {
+      this.checkJob = setInterval(this.checkConsumerConnection.bind(this), 500);
+    }
+  }
+
   public async publish(task: Task): Promise<any> {
-    await this.getProducerChannel();
-
-    if (this.producerChannel) return this.send(task);
-
-    return new Promise((resolve, reject) => {
+    const p = new Promise((resolve, reject) => {
       log('task %s pushed to wait queue', task.name);
       this.taskWaitQueue.push(() => {
         return this.send(task).then(resolve, reject);
       });
     });
+
+    await this.getConnection();
+
+    return p;
   }
 
   public async checkHealth(): Promise<any> {
