@@ -72,7 +72,6 @@ export class AMQPBroker extends Broker {
   private isProducerChannelCreating: boolean = false;
 
   private taskRegisterMap: TaskRegisterMap = {};
-  private taskRegisterWaitQueue: TaskRegister[] = [];
   private taskWaitQueue: any[] = [];
 
   private checkJob: NodeJS.Timer;
@@ -233,9 +232,10 @@ export class AMQPBroker extends Broker {
   }
 
   private async drainQueue(): Promise<void> {
-    log('TaskRegister Queue size %d', this.taskRegisterWaitQueue.length);
-    while (this.taskRegisterWaitQueue.length) {
-      const taskRegister = this.taskRegisterWaitQueue.pop();
+    const unregisteredTasks = _.filter(_.values(this.taskRegisterMap), registerTask => !registerTask.channel);
+    log('TaskRegister Queue size %d', unregisteredTasks.length);
+    while (unregisteredTasks.length) {
+      const taskRegister = unregisteredTasks.pop();
       await this.createChannelAndConsume(taskRegister);
     }
 
@@ -251,11 +251,6 @@ export class AMQPBroker extends Broker {
   }
 
   private async checkConsumerConnection(): Promise<void> {
-    await Promise.map(_.values(this.taskRegisterMap), async (taskRegister) => {
-      if (taskRegister.channel) return;
-      this.taskRegisterWaitQueue.push(taskRegister);
-    });
-
     await this.getConnection();
   }
 
@@ -376,8 +371,6 @@ export class AMQPBroker extends Broker {
       queueName: `${taskMeta.name}_${this.options.queueSuffix}`,
     };
     this.taskRegisterMap[taskMeta.name] = taskRegister;
-
-    this.taskRegisterWaitQueue.push(taskRegister);
 
     await this.getConnection();
 
