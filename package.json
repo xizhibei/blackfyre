@@ -1,6 +1,6 @@
 {
   "name": "blackfyre",
-  "version": "0.1.0-beta5",
+  "version": "0.1.0-beta6",
   "description": "Distributed asynchronous task queue/job queue",
   "main": "dist/src/index.js",
   "typings": "dist/src/index.d.ts",
