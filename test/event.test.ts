@@ -57,27 +57,30 @@ test('#events producer channel error', async (t) => {
       exchangeType: 'direct',
     },
   });
-  await producerDefault
-    .createTask(<Task>{
-      name: taskName,
-      body: { test: 'test' },
-    });
-
-  const producer = new Producer(<ProducerOptions>{
-    brokerOptions: <AMQPBrokerOptions>{
-      exchangeType: 'topic',
-    },
-  });
 
   t.plan(2);
   const { promise, doneOne } = waitUtilDone(2);
 
-  producer.on('error', () => {
-    t.true(true);
-    doneOne();
+  producerDefault.on('ready', () => {
+    const producer = new Producer(<ProducerOptions>{
+      brokerOptions: <AMQPBrokerOptions>{
+        exchangeType: 'topic',
+      },
+    });
+
+    producer.on('error', () => {
+      t.true(true);
+      doneOne();
+    });
+
+    producer
+      .createTask(<Task>{
+        name: taskName,
+        body: { test: 'test' },
+      });
   });
 
-  producer
+  await producerDefault
     .createTask(<Task>{
       name: taskName,
       body: { test: 'test' },
@@ -125,27 +128,29 @@ test('#events consumer channel error', async (t) => {
     },
   });
 
-  consumerDefault.registerTask(<TaskMeta>{
-    name: taskName,
-    concurrency: 20,
-  }, async (data) => {
-  });
-
-  const consumer = new Consumer(<ConsumerOptions>{
-    brokerOptions: <AMQPBrokerOptions>{
-      exchangeType: 'topic',
-    },
-  });
-
   t.plan(1);
   const { promise, doneOne } = waitUtilDone(1);
 
-  consumer.on('error', () => {
-    t.true(true);
-    doneOne();
+  consumerDefault.on('ready', () => {
+    const consumer = new Consumer(<ConsumerOptions>{
+      brokerOptions: <AMQPBrokerOptions>{
+        exchangeType: 'topic',
+      },
+    });
+
+    consumer.on('error', () => {
+      t.true(true);
+      doneOne();
+    });
+
+    consumer.registerTask(<TaskMeta>{
+      name: taskName,
+      concurrency: 20,
+    }, async (data) => {
+    });
   });
 
-  consumer.registerTask(<TaskMeta>{
+  consumerDefault.registerTask(<TaskMeta>{
     name: taskName,
     concurrency: 20,
   }, async (data) => {

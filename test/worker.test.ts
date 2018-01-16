@@ -89,7 +89,7 @@ test('#producer race', async (t) => {
 });
 
 test('#consumer race', async (t) => {
-  const taskName = 'test-producer-race';
+  const taskName = 'test-consumer-race';
 
   t.plan(5);
   const { promise, doneOne } = waitUtilDone(5);
