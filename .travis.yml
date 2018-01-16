@@ -1,19 +1,24 @@
 language: node_js
 node_js:
-  - 9
-  - 8
-  - 6
-  - 4
-
+- 9
+- 8
+- 6
+- 4
 cache:
   directories:
-    - $HOME/.npm
-    - $HOME/.yarn-cache
-
+  - $HOME/.npm
+  - $HOME/.yarn-cache
 services:
-   - rabbitmq
-   - mongodb
-
+- rabbitmq
+- mongodb
 script:
-  - npm run lint
-  - npm run coverage-ci
+- npm run lint
+- npm run coverage-ci
+deploy:
+  provider: npm
+  email: xuzhipei@gmail.com
+  api_key:
+    secure: bbFkxuUPXYR+BBQWIX5HYXxVZOVOTEBl7abBDJNc6K+2esxISfEdAfI3EigruKOI/ewCi/DWR6xwtJojUrcGsfCWWZspywSDlFcfzlYz7G49H03TVdnOdwxkK8ZdjFseo8HReL+4F3XDfy1N9vLnVvBJS8SfwtvfOSWk23z+ntZArD3zwv5xrKllBH1hh43qy3NxgmKIKYVPbx45tqZUovt7r6MxTKinyX10WzlzYiqq3XQ2MXy5UeKgtLq3/lpI+xQeSyugEskqa71evYVFVmlu/D059MJtGTleEiCAmbXztX4TPo9qaxGW/uRIQ6WgDiBkTJCHD+o799jsgVlDOdiwVnsV6da6FaGFcMG7/A3zI2MNB8xmesPcEXJ1+uvhjKF4r4PlIZo+eod++8iXOD9wbI+NP8Z6nEHqCm/HCN7OOT21oNnVYAbbMlfeQkXRylATj2SOz0G0M/p6gKxMPo4Lh83aiQLbiEhwwdTJKId8FsZass3vcelJ4TBStpOsiWuYgek9HzbAFale6YT1EXD5XhaMAPclM85k8XNWlmOrOmR/JUB0hvR6fb/AGyAkmVoKMlkd5r2DP+Gy5ljBmf3sCBvlT9alugAef9aW9oZPAuYp+ORPA0S+rBDarCNK/ZeSX8IIpfoHrfNfgc6tf/Ea6yLIvagywsbJYlcsn1Q=
+  on:
+    tags: true
+    repo: xizhibei/blackfyre
