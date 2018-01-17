@@ -22,11 +22,6 @@ Promise = Bluebird as any;
 
 const log = debug('blackfyre:consumer');
 
-export interface Logger {
-  info: (obj: object) => void;
-  error: (obj: object) => void;
-}
-
 export interface ProcessFunc {
   (data: any, task?: Task): Promise<any>;
 }
@@ -51,11 +46,6 @@ export interface ConsumerOptions {
    *  Backend options
    */
   backendOptions?: MongodbBackendOptions;
-
-  /**
-   *  Logger instance
-   */
-  logger?: Logger;
 
   /**
    *  Apm wrap, such as newrelic
@@ -88,10 +78,6 @@ export class Consumer extends EventEmitter {
     super();
 
     const defaultOptions: ConsumerOptions = {
-      logger: {
-        info: _.noop,
-        error: _.noop,
-      },
       processWrap: null,
       globalConcurrency: 256,
       backendType: BackendType.MongoDB,
@@ -115,23 +101,6 @@ export class Consumer extends EventEmitter {
 
   }
 
-  private logSuccess(task: Task, startTime: number, result: object): void {
-    this.options.logger.info({
-      task,
-      duration: Date.now() - startTime,
-      result: JSON.stringify(result),
-    });
-  }
-
-  private logFail(task: Task, startTime: number, e: Error): void {
-    this.options.logger.error({
-      task,
-      duration: Date.now() - startTime,
-      error: e,
-      errorStacks: e.stack && e.stack.split('\n'),
-    });
-  }
-
   public async registerTask(taskMeta: TaskMeta, processFunc: ProcessFunc): Promise<void> {
     log('Register task %s', taskMeta.name);
 
@@ -145,8 +114,6 @@ export class Consumer extends EventEmitter {
 
     async function processFuncWrap(body: any, task: Task) {
       await that.backend && that.backend.setTaskStateReceived(task);
-
-      const startTime = Date.now();
 
       if (that.options.preProcess) {
         that.options.preProcess.bind(this);
@@ -163,7 +130,6 @@ export class Consumer extends EventEmitter {
           that.options.postProcess(task, TaskState.SUCCEED, result);
         }
 
-        that.logSuccess(task, startTime, result);
       } catch (e) {
         if (!e.noRetry || task.retryCount === task.maxRetry) {
           e.state = TaskState.FAILED;
@@ -178,7 +144,6 @@ export class Consumer extends EventEmitter {
           that.options.postProcess(task, e.state, e);
         }
 
-        that.logFail(task, startTime, e);
         throw e;
       }
     }
