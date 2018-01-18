@@ -7,13 +7,9 @@
 
 Distributed asynchronous task queue/job queue
 
-### Warning
-- *In beta test*
-- *Not production ready yet.*
-
 ## Installation
 ```bash
-npm install blackfyre
+npm install blackfyre --save
 ```
 
 ## Features
@@ -22,7 +18,7 @@ npm install blackfyre
 - Real time operation
 - Delayed job
 - Priority job
-- Backend store
+- Backend store for results
 - Task retry with different strategies
 - Process function with pre & post hook
 - Wrap function for apm
@@ -48,6 +44,17 @@ consumer.registerTask(<TaskMeta>{
 await (new Producer())
     .createTask(<Task>{
         name: taskName,
+        body: { test: 'test' }
+    });
+```
+
+### Basic
+```ts
+await (new Producer())
+    .createTask(<Task>{
+        name: taskName,
+        // Delay for one hour
+        eta: new Date() + 60 * 60 * 1000
         body: { test: 'test' }
     });
 ```
@@ -112,6 +119,8 @@ console.log(producer.createdTasks[0].body);
  */
 
 ```
+
+More examples are in the folder `examples` or `test`
 
 ## License
 MIT
