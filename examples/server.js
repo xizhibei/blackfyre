@@ -9,7 +9,7 @@ const producer = new blackfyre.Producer({
   backendOptions: {
     url: 'mongodb://localhost',
     collectionName: 'tasks',
-    dbName: 'blackfyre',
+    dbName: 'blackfyre-example',
     resultsExpireIn: 600,
   },
   brokerType: blackfyre.BrokerType.AMQP,
@@ -17,6 +17,9 @@ const producer = new blackfyre.Producer({
     url: 'amqp://guest:guest@localhost',
     exchangeName: 'worker-exchange',
     queueSuffix: 'queue',
+    queueOptions: {
+      expires: 5000,
+    },
   },
   globalRetryOptions: {
     delayMs: 100,

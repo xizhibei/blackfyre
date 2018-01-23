@@ -84,12 +84,14 @@ export class AMQPBroker extends Broker {
       queueSuffix: 'queue',
       exchangeName: 'worker-exchange',
       exchangeType: 'direct',
-      queueOptions: <amqp.Options.AssertQueue>{
-        durable: true,
-      },
       socketOptions: null,
       exchangeOptions: null,
     }, options);
+
+    this.options.queueOptions = _.assign({
+        durable: true,
+    }, options.queueOptions);
+
   }
 
   private async createConnection(): Promise<amqp.Connection> {

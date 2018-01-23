@@ -17,7 +17,7 @@ const consumer = new blackfyre.Consumer({
   backendOptions: {
     url: 'mongodb://localhost',
     collectionName: 'tasks',
-    dbName: 'blackfyre',
+    dbName: 'blackfyre-example',
     resultsExpireIn: 600,
   },
   brokerType: blackfyre.BrokerType.AMQP,
@@ -25,6 +25,9 @@ const consumer = new blackfyre.Consumer({
     url: 'amqp://guest:guest@localhost',
     exchangeName: 'worker-exchange',
     queueSuffix: 'queue',
+    queueOptions: {
+      expires: 5000,
+    },
   },
   preProcess(task) {
     this.endTimer = summary.startTimer({
