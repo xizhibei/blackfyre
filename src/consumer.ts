@@ -81,9 +81,9 @@ export class Consumer extends EventEmitter {
       processWrap: null,
       globalConcurrency: 256,
       backendType: BackendType.MongoDB,
-      backendOptions: null,
+      backendOptions: {},
       brokerType: BrokerType.AMQP,
-      brokerOptions: null,
+      brokerOptions: {},
     };
     this.options = Object.assign({}, defaultOptions, config);
 
@@ -131,7 +131,8 @@ export class Consumer extends EventEmitter {
         }
 
       } catch (e) {
-        if (!e.noRetry || task.retryCount === task.maxRetry) {
+        // Mark error as noRetry result in task directly failed
+        if (e.noRetry || task.retryCount === task.maxRetry) {
           e.state = TaskState.FAILED;
           await that.backend && that.backend.setTaskStateFailed(task, e);
         } else {

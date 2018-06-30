@@ -2,7 +2,7 @@ import test from 'ava';
 
 import * as Bluebird from 'bluebird';
 import * as _ from 'lodash';
-import { Producer, Consumer, Task, RetryStrategy, TaskMeta } from '../src/index';
+import { Producer, Consumer, Task, RetryStrategy, TaskMeta, TaskState } from '../src/index';
 import { waitUtilDone } from './utils';
 
 Promise = Bluebird as any;
@@ -59,10 +59,15 @@ test('#retry task abort', async t => {
   const taskName = `test-retry-abort`;
 
   const maxRetry = 5;
-  t.plan(1);
+  t.plan(3);
   const { promise, doneOne } = waitUtilDone(1);
 
-  const consumer = new Consumer();
+  const consumer = new Consumer({
+    postProcess(task, state, errorOrResult) {
+      t.is(state, TaskState.FAILED);
+      t.is(errorOrResult.message, 'test');
+    },
+  });
 
   consumer.registerTask(<TaskMeta>{
     name: taskName,

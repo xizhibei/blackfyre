@@ -69,9 +69,9 @@ export class Producer extends EventEmitter {
     this.options = Object.assign(<ProducerOptions>{
       isTestMode: false,
       backendType: BackendType.MongoDB,
-      backendOptions: null,
+      backendOptions: {},
       brokerType: BrokerType.AMQP,
-      brokerOptions: null,
+      brokerOptions: {},
     }, options);
 
     this.options.globalRetryOptions = Object.assign(<RetryOptions>{
