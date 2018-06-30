@@ -47,6 +47,11 @@ export interface RetryOptions {
 
 export interface Task extends RetryOptions {
   /**
+   * Task version, fixed: `1.0`
+   */
+  v: string,
+
+  /**
    * Task id, default: `uuid.v4()`
    */
   id: string;

@@ -16,7 +16,7 @@ import { BackendType, Backend } from './backends/interface';
 import { MongodbBackend, MongodbBackendOptions } from './backends/mongodb';
 import { BrokerType, Broker } from './brokers/interface';
 import { AMQPBroker, AMQPBrokerOptions } from './brokers/amqp';
-import { registerEvent } from './helper';
+import { registerEvent, checkVersion } from './helper';
 
 Promise = Bluebird as any;
 
@@ -121,6 +121,8 @@ export class Consumer extends EventEmitter {
       }
 
       try {
+        checkVersion(task.v);
+
         await that.backend && that.backend.setTaskStateStarted(task);
         const result = await processFunc(task.body, task);
         await that.backend && that.backend.setTaskStateSucceed(task, result);
