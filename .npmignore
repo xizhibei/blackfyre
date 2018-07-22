@@ -6,6 +6,7 @@ dist/test
 .vscode
 .editorconfig
 tslint.json
+tsconfig.json
 *.tgz
 .nyc_output
 coverage
