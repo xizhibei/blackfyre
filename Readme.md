@@ -26,7 +26,7 @@ yarn add blackfyre
 - Delayed job
 - Priority job
 - Backend store for results
-- Task retry with different strategies
+- Task retry with different strategies & task abort
 - Process function with pre & post hook
 - Wrap function for apm
 
@@ -61,7 +61,7 @@ await (new Producer())
     });
 ```
 
-### Basic
+### Task delay
 ```ts
 await (new Producer())
     .createTask(<Task>{
@@ -69,6 +69,28 @@ await (new Producer())
         // Delay for one hour
         eta: new Date() + 60 * 60 * 1000
         body: { test: 'test' }
+    });
+```
+
+### Task retry
+```ts
+class CustomError extends Error {
+  noRetry: boolean = true;
+}
+
+const consumer = (new Consumer())
+    .registerTask(<TaskMeta>{
+        name: taskName,
+        concurrency: 20,
+        maxRetry: 10,
+    }, async (data) => {
+        if (Math.random() > 0.5) {
+            // will not be retry
+            throw new CustomError('ignorable error');
+        } else {
+            // will be retry
+            throw new Error('non-ignorable error');
+        }
     });
 ```
 
@@ -91,7 +113,7 @@ const consumer = new Consumer(<ConsumerOptions>{
 });
 ```
 
-### Using prom client moniter
+### Using [prom-client](https://github.com/siimon/prom-client)
 ```ts
 const summary = new promClient.Summary({
     name: 'job_summary',
@@ -103,7 +125,7 @@ const summary = new promClient.Summary({
 const consumer = new Consumer(<ConsumerOptions>{
     preProcess(task: Task) {
       // Yes, `this` binded to the process warp function,
-      // so you may share some vars with the `postPostprocess`
+      // so you may share some vars with the `postProcess`
       this.endTimer = summary.startTimer({ taskName: task.name });
     },
     postProcess(task: Task, state: TaskState, errorOrResult: any) {
