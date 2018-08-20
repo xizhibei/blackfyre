@@ -1,6 +1,6 @@
 language: node_js
 node_js:
-- 9
+- 10
 - 8
 - 6
 - 4
@@ -18,8 +18,7 @@ deploy:
   provider: npm
   email: xuzhipei@gmail.com
   api_key:
-    secure: bbFkxuUPXYR+BBQWIX5HYXxVZOVOTEBl7abBDJNc6K+2esxISfEdAfI3EigruKOI/ewCi/DWR6xwtJojUrcGsfCWWZspywSDlFcfzlYz7G49H03TVdnOdwxkK8ZdjFseo8HReL+4F3XDfy1N9vLnVvBJS8SfwtvfOSWk23z+ntZArD3zwv5xrKllBH1hh43qy3NxgmKIKYVPbx45tqZUovt7r6MxTKinyX10WzlzYiqq3XQ2MXy5UeKgtLq3/lpI+xQeSyugEskqa71evYVFVmlu/D059MJtGTleEiCAmbXztX4TPo9qaxGW/uRIQ6WgDiBkTJCHD+o799jsgVlDOdiwVnsV6da6FaGFcMG7/A3zI2MNB8xmesPcEXJ1+uvhjKF4r4PlIZo+eod++8iXOD9wbI+NP8Z6nEHqCm/HCN7OOT21oNnVYAbbMlfeQkXRylATj2SOz0G0M/p6gKxMPo4Lh83aiQLbiEhwwdTJKId8FsZass3vcelJ4TBStpOsiWuYgek9HzbAFale6YT1EXD5XhaMAPclM85k8XNWlmOrOmR/JUB0hvR6fb/AGyAkmVoKMlkd5r2DP+Gy5ljBmf3sCBvlT9alugAef9aW9oZPAuYp+ORPA0S+rBDarCNK/ZeSX8IIpfoHrfNfgc6tf/Ea6yLIvagywsbJYlcsn1Q=
+    secure: hE+jsY9cI0z4TD/wgrKm9Zk1Ie6KJS1vB6KJTjKMJ4a9pkZEiHfUklRl/axypn0OGqPg3NvIzFeLfFhBzs+zbkVs4T8uKi/7MZlXJ48BDgLtg/JWP9ez9MEugounPs9JHX/a017Yiner+7OEiyBldT3yk3YMx1ZI9Y7u2t9jez1gu1goTbCLVLvMqWPia0YC8hkvDmL+/HjSxzCT6ObvVaRkXxdlO3OsXardQY7yjlodj/ScaXVGVxPaMhhdxnFnCP02TD+wTFZpN+7dBc8LESJ/mPeCqmzdExHEVib4J3ScaYsj07mDYKm9CnZpI0qnasFcJnjmPM6qbXK/jD4jwKdOOoXksgL778qqPlW5Qt/qNfiDiRVhsJDdAIJ9Qaj5t4fNrnxvpF0SandAvpPxpw0yLAY2WbZt//gLFWw+P5q9WCffOfIgqFE+MFQG0CkOvGEdBXFPCFsglKE+hEYFbK89/uGrofj4wsaB4nzl4cBQSSEEOjuBlWfaLBYQOEyJIxz5p52FOJ+gaKHEM16/07oFginn1YwK50+jlM1O2NzdiiRiQHV5xfLW1coyWZZRdBpogv8s1q3WBhDA5y8JEvLbMXC0vjgC1o3DrLpHMWSML9nxnRcHixG78WRo4HfIQRzhHId8vArCvEXe0MJWdLDKIkEKh1PhX6nVngnIqes=
   on:
     tags: true
     repo: xizhibei/blackfyre
-  skip_cleanup: true
