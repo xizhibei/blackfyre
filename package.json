@@ -1,6 +1,6 @@
 {
   "name": "blackfyre",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Distributed asynchronous task queue/job queue",
   "main": "dist/src/index.js",
   "typings": "dist/src/index.d.ts",
@@ -15,7 +15,7 @@
   "keywords": [
     "rabbitmq",
     "amqp",
-    "produer",
+    "producer",
     "consumer",
     "worker",
     "job",
