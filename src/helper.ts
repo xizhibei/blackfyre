@@ -2,7 +2,7 @@ import * as _ from 'lodash';
 import { RetryStrategy } from './common';
 import { Options } from 'amqplib';
 import { Task } from './index';
-import { PROTOCAL_VERSION } from './constant';
+import { PROTOCOL_VERSION } from './constant';
 
 function _fibonacci(): (() => number) {
   let a: number = 0;
@@ -66,10 +66,10 @@ export function registerEvent(events, source, target) {
 
 export function checkVersion(version: string = '1.0') {
   const [, major, minor] = version.match(/^(\d+).(\d+)$/);
-  const [, currentMajor, currentMinor] = PROTOCAL_VERSION.match(/^(\d+).(\d+)$/);
+  const [, currentMajor, currentMinor] = PROTOCOL_VERSION.match(/^(\d+).(\d+)$/);
 
   if (major !== currentMajor) {
-    throw new Error(`protocal not compatible: ${version}, current: ${PROTOCAL_VERSION}`);
+    throw new Error(`protocol not compatible: ${version}, current: ${PROTOCOL_VERSION}`);
   }
 
   return {

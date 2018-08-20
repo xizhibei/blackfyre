@@ -3,12 +3,12 @@ import test from 'ava';
 import * as Bluebird from 'bluebird';
 import { Producer, Consumer, Task, TaskMeta } from '../src/index';
 import { waitUtilDone } from './utils';
-import { PROTOCAL_VERSION } from '../src/constant';
+import { PROTOCOL_VERSION } from '../src/constant';
 
 Promise = Bluebird as any;
 
-test('#protocal', async t => {
-  const taskName = `test-protocal`;
+test('#protocol', async t => {
+  const taskName = `test-protocol`;
 
   t.plan(1);
   const { promise, doneOne } = waitUtilDone(1);
@@ -19,7 +19,7 @@ test('#protocal', async t => {
     name: taskName,
     concurrency: 20,
   }, async (data, task) => {
-    t.is(task.v, PROTOCAL_VERSION);
+    t.is(task.v, PROTOCOL_VERSION);
     doneOne();
   });
 

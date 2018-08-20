@@ -13,7 +13,7 @@ import { MongodbBackend, MongodbBackendOptions } from './backends/mongodb';
 import { BrokerType, Broker } from './brokers/interface';
 import { AMQPBrokerOptions, AMQPBroker } from './brokers/amqp';
 import { registerEvent } from './helper';
-import { PROTOCAL_VERSION } from './constant';
+import { PROTOCOL_VERSION } from './constant';
 
 const log = debug('blackfyre:producer');
 
@@ -97,7 +97,7 @@ export class Producer extends EventEmitter {
   }
 
   public async createTask(task: Task): Promise<any> {
-    task.v = PROTOCAL_VERSION;
+    task.v = PROTOCOL_VERSION;
     task.id = task.id || uuid.v4();
     task.retryCount = 0;
 
