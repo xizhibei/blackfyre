@@ -283,7 +283,7 @@ export class AMQPBroker extends Broker {
     const queueDaclareOptions = getDelayQueueOptions(delayMs, this.options.exchangeName, task.name);
 
     await taskRegister.channel.assertQueue(delayQueue, queueDaclareOptions);
-    await taskRegister.channel.sendToQueue(delayQueue, new Buffer(JSON.stringify(task)), {
+    await taskRegister.channel.sendToQueue(delayQueue, Buffer.from(JSON.stringify(task)), {
       persistent: true,
     });
     return task.maxRetry - task.retryCount;
@@ -347,14 +347,14 @@ export class AMQPBroker extends Broker {
 
       await ch.assertQueue(delayQueue, queueDaclareOptions);
 
-      return ch.sendToQueue(delayQueue, new Buffer(data), publishOptions);
+      return ch.sendToQueue(delayQueue, Buffer.from(data), publishOptions);
     }
 
     return new Promise((resolve, reject) => {
       return ch.publish(
         exchangeName,
         routingKey,
-        new Buffer(data),
+        Buffer.from(data),
         publishOptions,
         (err, ok) => {
           /* istanbul ignore if */
