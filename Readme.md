@@ -4,7 +4,8 @@
 [![npm version](https://badge.fury.io/js/blackfyre.svg?style=flat)](http://badge.fury.io/js/blackfyre)
 [![Dependency Status](https://img.shields.io/david/xizhibei/blackfyre.svg?style=flat)](https://david-dm.org/xizhibei/blackfyre)
 [![Coverage Status](https://coveralls.io/repos/github/xizhibei/blackfyre/badge.svg?branch=master)](https://coveralls.io/github/xizhibei/blackfyre?branch=master)
-[![npm](https://img.shields.io/npm/l/blackfyre.svg)](https://github.com/xizhibei/blackfyre/blob/master/LICENSE) [![Greenkeeper badge](https://badges.greenkeeper.io/xizhibei/blackfyre.svg)](https://greenkeeper.io/)
+[![npm](https://img.shields.io/npm/l/blackfyre.svg)](https://github.com/xizhibei/blackfyre/blob/master/LICENSE)
+[![Greenkeeper badge](https://badges.greenkeeper.io/xizhibei/blackfyre.svg)](https://greenkeeper.io/)
 
 Distributed asynchronous task queue/job queue
 
