@@ -12,6 +12,7 @@ export interface TaskRegister {
   queueName: string;
   consumerTag?: string;
   channel?: amqp.Channel;
+  channeling?: boolean;
 }
 
 export interface TaskRegisterMap {
