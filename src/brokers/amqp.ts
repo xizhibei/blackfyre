@@ -236,10 +236,10 @@ export class AMQPBroker extends Broker {
 
   private async drainQueue(): Promise<void> {
     const unregisteredTasks = _.filter(_.values(this.taskRegisterMap), registerTask => {
-      if (registerTask.channeling) return false
+      if (registerTask.channeling) return false;
       registerTask.channeling = true;
-      return true
-    })
+      return true;
+    });
     log('TaskRegister Queue size %d', unregisteredTasks.length);
     await Promise.map(unregisteredTasks, async (taskRegister) => {
       await this.createChannelAndConsume(taskRegister);
